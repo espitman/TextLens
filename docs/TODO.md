@@ -44,7 +44,7 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 ## Phase 2: Global Hotkey
 
 - [x] Implement global hotkey support
-  - [x] Register `Command + Shift + T`
+  - [x] Register `Command + Shift + 0`
   - [x] Trigger the same flow as `Translate Area`
   - [x] Unregister the hotkey cleanly on app shutdown
 
@@ -95,22 +95,22 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 
 ## Phase 5: OCR
 
-- [ ] Implement `OCRService`
-  - [ ] Use `VNRecognizeTextRequest`
-  - [ ] Set recognition level to `.accurate`
-  - [ ] Enable language correction
-  - [ ] Use `en-US` as the MVP recognition language
+- [x] Implement `OCRService`
+  - [x] Use `VNRecognizeTextRequest`
+  - [x] Set recognition level to `.accurate`
+  - [x] Enable language correction
+  - [x] Use `en-US` as the MVP recognition language
 
-- [ ] Normalize OCR output
-  - [ ] Extract top text candidates
-  - [ ] Preserve logical line breaks
-  - [ ] Trim empty lines
-  - [ ] Return a plain text string
+- [x] Normalize OCR output
+  - [x] Extract top text candidates
+  - [x] Preserve logical line breaks
+  - [x] Trim empty lines
+  - [x] Return a plain text string
 
-- [ ] Handle OCR errors and empty results
-  - [ ] Show `No text found in selected area` when no text is detected
-  - [ ] Surface Vision errors in a simple, readable way
-  - [ ] Ensure OCR failures do not crash the app
+- [x] Handle OCR errors and empty results
+  - [x] Show `No text found in selected area` when no text is detected
+  - [x] Surface Vision errors in a simple, readable way
+  - [x] Ensure OCR failures do not crash the app
 
 ## Phase 6: Settings
 
@@ -200,7 +200,7 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 
 - [ ] Verify acceptance criteria
   - [ ] App launches in the menu bar
-  - [ ] `Command + Shift + T` opens the selection overlay
+  - [ ] `Command + Shift + 0` opens the selection overlay
   - [ ] User can select a screen area
   - [ ] App captures the selected area
   - [ ] OCR extracts simple English text

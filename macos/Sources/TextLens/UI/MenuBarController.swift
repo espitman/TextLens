@@ -28,7 +28,7 @@ final class MenuBarController: NSObject {
         }
 
         let menu = NSMenu()
-        menu.addItem(menuItem(title: "Translate Area", action: #selector(translateArea), keyEquivalent: "t", modifiers: [.command, .shift]))
+        menu.addItem(menuItem(title: "Translate Area", action: #selector(translateArea), keyEquivalent: "0", modifiers: [.command, .shift]))
         menu.addItem(menuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ",", modifiers: [.command]))
         menu.addItem(.separator())
         menu.addItem(menuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q", modifiers: [.command]))

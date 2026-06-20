@@ -51,7 +51,7 @@ The planned settings are:
 The planned default shortcut is:
 
 ```text
-Command + Shift + T
+Command + Shift + 0
 ```
 
 ## MVP Limitations

@@ -36,7 +36,7 @@ final class HotKeyService {
 
         var registeredHotKeyRef: EventHotKeyRef?
         let hotKeyStatus = RegisterEventHotKey(
-            UInt32(kVK_ANSI_T),
+            UInt32(kVK_ANSI_0),
             UInt32(cmdKey | shiftKey),
             HotKeyService.defaultHotKeyID,
             GetApplicationEventTarget(),

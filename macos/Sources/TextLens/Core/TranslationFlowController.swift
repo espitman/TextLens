@@ -5,6 +5,7 @@ final class TranslationFlowController {
     private var selectionOverlayWindow: SelectionOverlayWindow?
     private let permissionService = PermissionService()
     private let screenshotService = ScreenshotService()
+    private let ocrService = OCRService()
     private let errorPresenter = ErrorPresenter()
 
     func startTranslateArea() {
@@ -26,24 +27,31 @@ final class TranslationFlowController {
                 return
             }
 
-            self?.handleSelectedArea(selection)
+            Task { [weak self] in
+                await self?.handleSelectedArea(selection)
+            }
         }
 
         selectionOverlayWindow = overlayWindow
         overlayWindow.show()
     }
 
-    private func handleSelectedArea(_ selection: ScreenSelection) {
+    private func handleSelectedArea(_ selection: ScreenSelection) async {
         do {
             guard permissionService.hasScreenRecordingPermission() || permissionService.requestScreenRecordingPermission() else {
                 permissionService.openScreenRecordingSettings()
                 throw TextLensError.screenRecordingPermissionMissing
             }
 
-            _ = try screenshotService.capture(rect: selection.rect, displayID: selection.displayID)
-            // TODO: Pass the captured image to OCR in Phase 5.
+            let image = try screenshotService.capture(rect: selection.rect, displayID: selection.displayID)
+            let recognizedText = try await ocrService.recognizeText(from: image)
+            await MainActor.run {
+                errorPresenter.presentMessage(title: "Recognized Text", message: recognizedText)
+            }
         } catch {
-            errorPresenter.present(error)
+            await MainActor.run {
+                errorPresenter.present(error)
+            }
         }
     }
 }
