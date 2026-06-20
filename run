@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MACOS_DIR="$SCRIPT_DIR/macos"
+BUILD_DIR="$MACOS_DIR/.build/arm64-apple-macosx/release"
+APP_NAME="TextLens"
+APP_BUNDLE="/Applications/$APP_NAME.app"
+TEMP_APP_BUNDLE="/tmp/$APP_NAME.app"
+BUNDLE_IDENTIFIER="com.textlens.app"
+
+echo "Building $APP_NAME..."
+cd "$MACOS_DIR"
+swift build -c release
+
+echo "Creating app bundle..."
+rm -rf "$TEMP_APP_BUNDLE"
+mkdir -p "$TEMP_APP_BUNDLE/Contents/MacOS" "$TEMP_APP_BUNDLE/Contents/Resources"
+
+cp "$BUILD_DIR/$APP_NAME" "$TEMP_APP_BUNDLE/Contents/MacOS/$APP_NAME"
+chmod +x "$TEMP_APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
+if [ -d "$BUILD_DIR/TextLens_TextLens.bundle" ]; then
+  cp -R "$BUILD_DIR/TextLens_TextLens.bundle" "$TEMP_APP_BUNDLE/Contents/Resources/"
+fi
+
+cat > "$TEMP_APP_BUNDLE/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>$APP_NAME</string>
+    <key>CFBundleIdentifier</key>
+    <string>$BUNDLE_IDENTIFIER</string>
+    <key>CFBundleName</key>
+    <string>$APP_NAME</string>
+    <key>CFBundleDisplayName</key>
+    <string>$APP_NAME</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+
+echo "Installing $APP_BUNDLE..."
+rm -rf "$APP_BUNDLE"
+cp -R "$TEMP_APP_BUNDLE" "$APP_BUNDLE"
+
+echo "Restarting $APP_NAME..."
+pkill -x "$APP_NAME" 2>/dev/null || true
+open "$APP_BUNDLE"
+
+echo "$APP_NAME is running from $APP_BUNDLE"

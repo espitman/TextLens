@@ -27,6 +27,14 @@ cd macos
 swift build
 ```
 
+Build, install, and run it from the repository root with:
+
+```sh
+./run
+```
+
+The script creates `/Applications/TextLens.app` and opens it. This gives macOS a stable app identity for Screen Recording permission.
+
 ## Documentation
 
 - [Implementation spec](docs/TextLens_Codex_Spec.md)

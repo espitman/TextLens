@@ -32,26 +32,22 @@ final class SelectionOverlayView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
-        NSColor.black.withAlphaComponent(0.42).setFill()
-        bounds.fill()
-
         guard let selectionRect else {
             return
         }
 
-        NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(rect: selectionRect).setClip()
-        NSColor.clear.setFill()
-        selectionRect.fill(using: .clear)
-        NSGraphicsContext.restoreGraphicsState()
-
-        NSColor.white.withAlphaComponent(0.95).setStroke()
-        let border = NSBezierPath(rect: selectionRect.insetBy(dx: 0.5, dy: 0.5))
-        border.lineWidth = 2
-        border.stroke()
-
-        NSColor.controlAccentColor.withAlphaComponent(0.22).setFill()
+        NSColor.black.withAlphaComponent(0.16).setFill()
         selectionRect.fill()
+
+        let outerBorder = NSBezierPath(rect: selectionRect.insetBy(dx: 0.5, dy: 0.5))
+        outerBorder.lineWidth = 3
+        NSColor.black.withAlphaComponent(0.45).setStroke()
+        outerBorder.stroke()
+
+        let innerBorder = NSBezierPath(rect: selectionRect.insetBy(dx: 1.5, dy: 1.5))
+        innerBorder.lineWidth = 1.5
+        NSColor.white.withAlphaComponent(0.96).setStroke()
+        innerBorder.stroke()
     }
 
     override func mouseDown(with event: NSEvent) {

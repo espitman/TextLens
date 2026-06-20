@@ -14,8 +14,7 @@ final class SelectionOverlayWindow: NSWindow {
             contentRect: screen.frame,
             styleMask: [.borderless],
             backing: .buffered,
-            defer: false,
-            screen: screen
+            defer: false
         )
 
         let overlayView = SelectionOverlayView { [weak self] selectionRect in
@@ -23,24 +22,26 @@ final class SelectionOverlayWindow: NSWindow {
                 return
             }
 
+            let result: ScreenSelection?
             if let selectionRect {
-                self.completion(
-                    ScreenSelection(
-                        rect: self.convertToScreen(selectionRect),
-                        displayID: self.screenDisplayID
-                    )
+                result = ScreenSelection(
+                    rect: self.convertToScreen(selectionRect),
+                    displayID: self.screenDisplayID
                 )
             } else {
-                self.completion(nil)
+                result = nil
             }
 
-            self.close()
+            let completion = self.completion
+            self.orderOut(nil)
+            completion(result)
         }
 
         contentView = overlayView
         backgroundColor = .clear
         isOpaque = false
         hasShadow = false
+        isReleasedWhenClosed = false
         ignoresMouseEvents = false
         level = .screenSaver
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
