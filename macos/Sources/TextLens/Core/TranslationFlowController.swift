@@ -4,6 +4,7 @@ final class TranslationFlowController {
     private(set) var isRunning = false
     private var selectionOverlayWindow: SelectionOverlayWindow?
     private var translationPopupWindow: TranslationPopupWindow?
+    private var currentTask: Task<Void, Never>?
     private let settingsStore: SettingsStore
     private let openSettings: () -> Void
     private let permissionService = PermissionService()
@@ -36,13 +37,16 @@ final class TranslationFlowController {
         // TODO: Add multi-display overlay support after the primary-display MVP path is stable.
         let overlayWindow = SelectionOverlayWindow { [weak self] selection in
             self?.selectionOverlayWindow = nil
-            self?.isRunning = false
 
             guard let selection else {
+                self?.isRunning = false
                 return
             }
 
-            Task { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.showLoadingPopup(near: selection.rect)
+            }
+            self?.currentTask = Task { [weak self] in
                 await self?.handleSelectedArea(selection)
             }
         }
@@ -63,21 +67,34 @@ final class TranslationFlowController {
             let settings = await MainActor.run {
                 settingsStore.settings
             }
-            let translatedText = try await translationService.translate(recognizedText, settings: settings)
+            let translationResult = try await translationService.translate(recognizedText, settings: settings)
             await MainActor.run {
-                showTranslationPopup(translatedText, near: selection.rect)
+                translationPopupWindow?.showResult(translationResult)
+                currentTask = nil
+                isRunning = false
+            }
+        } catch is CancellationError {
+            await MainActor.run {
+                currentTask = nil
+                isRunning = false
             }
         } catch {
             await MainActor.run {
-                errorPresenter.present(error)
+                translationPopupWindow?.showError(error)
+                currentTask = nil
+                isRunning = false
             }
         }
     }
 
     @MainActor
-    private func showTranslationPopup(_ translatedText: String, near selectionRect: CGRect) {
+    private func showLoadingPopup(near selectionRect: CGRect) {
         translationPopupWindow?.close()
-        let popupWindow = TranslationPopupWindow(translatedText: translatedText, near: selectionRect)
+        let popupWindow = TranslationPopupWindow(near: selectionRect) { [weak self] in
+            self?.currentTask?.cancel()
+            self?.currentTask = nil
+            self?.isRunning = false
+        }
         translationPopupWindow = popupWindow
         popupWindow.show()
     }

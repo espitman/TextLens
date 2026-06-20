@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        FontRegistrar.registerBundledFonts()
         NSApp.setActivationPolicy(.accessory)
         menuBarController = MenuBarController(
             onTranslateArea: { [weak self] in

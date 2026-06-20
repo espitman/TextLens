@@ -1,47 +1,46 @@
 import AppKit
 import SwiftUI
 
+@MainActor
 final class TranslationPopupWindow: NSPanel {
-    init(translatedText: String, near selectionRect: CGRect) {
-        let hostingController = NSHostingController(
-            rootView: TranslationPopupView(
-                translatedText: translatedText,
-                onCopy: {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(translatedText, forType: .string)
-                },
-                onClose: {}
-            )
-        )
+    let viewModel = TranslationPopupViewModel()
+
+    private var translatedTextForCopy = ""
+    private let onCancel: () -> Void
+
+    init(near selectionRect: CGRect, onCancel: @escaping () -> Void) {
+        self.onCancel = onCancel
 
         super.init(
-            contentRect: CGRect(x: 0, y: 0, width: 420, height: 220),
-            styleMask: [.titled, .closable, .nonactivatingPanel],
+            contentRect: CGRect(origin: .zero, size: TranslationPopupView.popupSize),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
 
-        contentViewController = hostingController
-        titleVisibility = .hidden
-        titlebarAppearsTransparent = true
+        contentViewController = NSHostingController(
+            rootView: TranslationPopupView(
+                viewModel: viewModel,
+                onCopy: { [weak self] in
+                    self?.copyTranslation()
+                },
+                onCancel: { [weak self] in
+                    self?.cancel()
+                },
+                onClose: { [weak self] in
+                    self?.close()
+                }
+            )
+        )
+
         isReleasedWhenClosed = false
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = true
+        hasShadow = false
+        setContentSize(TranslationPopupView.popupSize)
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        setFrameOrigin(Self.origin(for: frame.size, near: selectionRect))
-
-        hostingController.rootView = TranslationPopupView(
-            translatedText: translatedText,
-            onCopy: {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(translatedText, forType: .string)
-            },
-            onClose: { [weak self] in
-                self?.close()
-            }
-        )
+        setFrameOrigin(Self.origin(for: TranslationPopupView.popupSize, near: selectionRect))
     }
 
     override var canBecomeKey: Bool {
@@ -50,7 +49,11 @@ final class TranslationPopupWindow: NSPanel {
 
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 {
-            close()
+            if case .loading = viewModel.state {
+                cancel()
+            } else {
+                close()
+            }
         } else {
             super.keyDown(with: event)
         }
@@ -58,6 +61,9 @@ final class TranslationPopupWindow: NSPanel {
 
     override func resignKey() {
         super.resignKey()
+        if case .loading = viewModel.state {
+            return
+        }
         close()
     }
 
@@ -65,11 +71,35 @@ final class TranslationPopupWindow: NSPanel {
         makeKeyAndOrderFront(nil)
     }
 
+    func showResult(_ result: TranslationResult) {
+        translatedTextForCopy = result.translatedText
+        viewModel.state = .result(text: result.translatedText, costToman: result.costToman)
+    }
+
+    func showError(_ error: Error) {
+        translatedTextForCopy = ""
+        viewModel.state = .failed(error.localizedDescription)
+    }
+
+    private func copyTranslation() {
+        guard !translatedTextForCopy.isEmpty else {
+            return
+        }
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(translatedTextForCopy, forType: .string)
+    }
+
+    private func cancel() {
+        onCancel()
+        close()
+    }
+
     private static func origin(for popupSize: CGSize, near selectionRect: CGRect) -> CGPoint {
         let visibleFrame = NSScreen.screens
             .first { $0.frame.intersects(selectionRect) }?
             .visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
-        let padding: CGFloat = 12
+        let padding: CGFloat = 14
         var x = selectionRect.minX
         var y = selectionRect.minY - popupSize.height - padding
 
