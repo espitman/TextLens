@@ -4,23 +4,24 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 
 ## Phase 0: Project Setup
 
-- [ ] Create the macOS app project
-  - [ ] Create a Swift macOS app named `TextLens`
-  - [ ] Configure the app as a menu bar app with no default main window
-  - [ ] Set minimum deployment target to macOS 13+
-  - [ ] Add required app entitlements and privacy usage descriptions where needed
+- [x] Create the macOS app project
+  - [x] Create a Swift macOS app named `TextLens`
+  - [x] Configure the app as a menu bar app with no default main window
+  - [x] Set minimum deployment target to macOS 13+
+  - [x] Add required app entitlements and privacy usage descriptions where needed
+  - [x] Place the macOS app under `macos` for future cross-platform targets
 
-- [ ] Define the initial source structure
-  - [ ] Create `Core/`
-  - [ ] Create `UI/`
-  - [ ] Create `Models/`
-  - [ ] Create `Utils/`
-  - [ ] Add placeholder files for the main services and views
+- [x] Define the initial source structure
+  - [x] Create `Core/`
+  - [x] Create `UI/`
+  - [x] Create `Models/`
+  - [x] Create `Utils/`
+  - [x] Add placeholder files for the main services and views
 
-- [ ] Add documentation
-  - [ ] Create `README.md`
-  - [ ] Document build and run steps
-  - [ ] Document MVP limitations
+- [x] Add documentation
+  - [x] Create `README.md`
+  - [x] Document build and run steps
+  - [x] Document MVP limitations
 
 ## Phase 1: Menu Bar Shell
 
