@@ -12,7 +12,7 @@ final class TranslationPopupViewModel: ObservableObject {
 }
 
 struct TranslationPopupView: View {
-    static let popupSize = CGSize(width: 780, height: 300)
+    static let popupSize = CGSize(width: 1170, height: 750)
 
     @ObservedObject var viewModel: TranslationPopupViewModel
     let onCopy: () -> Void
@@ -31,15 +31,16 @@ struct TranslationPopupView: View {
 
             content
                 .frame(maxWidth: .infinity)
-                .frame(height: 150)
+                .frame(height: 560)
                 .padding(.horizontal, 28)
-                .padding(.vertical, 18)
+                .padding(.vertical, 24)
 
             Divider()
 
             footer
                 .padding(.horizontal, 22)
-                .padding(.vertical, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 22)
         }
         .frame(width: Self.popupSize.width, height: Self.popupSize.height)
         .background(panelBackground)
@@ -102,9 +103,9 @@ struct TranslationPopupView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(rtlText(text))
-                        .font(.custom("Vazirmatn", size: 17).weight(.regular))
+                        .font(.custom("Vazirmatn", size: 15).weight(.regular))
                         .foregroundStyle(.black.opacity(0.86))
-                        .lineSpacing(6)
+                        .lineSpacing(5)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .multilineTextAlignment(.leading)
                         .textSelection(.enabled)
@@ -147,9 +148,9 @@ struct TranslationPopupView: View {
         switch viewModel.state {
         case .loading:
             Button("لغو", action: onCancel)
-                .font(.custom("Vazirmatn", size: 15).weight(.medium))
+                .font(.custom("Vazirmatn", size: 13).weight(.medium))
                 .buttonStyle(.bordered)
-                .controlSize(.large)
+                .controlSize(.regular)
                 .keyboardShortcut(.cancelAction)
 
         case .result:
@@ -157,26 +158,26 @@ struct TranslationPopupView: View {
                 onCopy()
             } label: {
                 Label("کپی", systemImage: "doc.on.doc")
-                    .font(.custom("Vazirmatn", size: 15).weight(.medium))
+                    .font(.custom("Vazirmatn", size: 13).weight(.medium))
             }
             .buttonStyle(.bordered)
-            .controlSize(.large)
+            .controlSize(.regular)
 
             Button {
                 onClose()
             } label: {
                 Label("بستن", systemImage: "xmark")
-                    .font(.custom("Vazirmatn", size: 15).weight(.medium))
+                    .font(.custom("Vazirmatn", size: 13).weight(.medium))
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .controlSize(.regular)
             .keyboardShortcut(.cancelAction)
 
         case .failed:
             Button("بستن", action: onClose)
-                .font(.custom("Vazirmatn", size: 15).weight(.medium))
+                .font(.custom("Vazirmatn", size: 13).weight(.medium))
                 .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .controlSize(.regular)
                 .keyboardShortcut(.cancelAction)
         }
     }
@@ -234,12 +235,12 @@ private struct CostBadge: View {
         HStack(spacing: 8) {
             Text(label)
             Image(systemName: "tag")
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
         }
-        .font(.custom("Vazirmatn", size: 15).weight(.medium))
+        .font(.custom("Vazirmatn", size: 13).weight(.medium))
         .foregroundStyle(Color.green.opacity(0.9))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .fill(Color.green.opacity(0.1))
