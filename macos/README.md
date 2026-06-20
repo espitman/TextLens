@@ -38,13 +38,14 @@ System Settings -> Privacy & Security -> Screen Recording
 
 ## API Key Setup
 
-API settings will be implemented in Phase 6.
+TextLens defaults to Liara's OpenAI-compatible Chat API.
 
-The planned settings are:
+The settings are:
 
 - API Key
-- Base URL, defaulting to `https://api.openai.com/v1`
-- Model, defaulting to `gpt-4o-mini`
+- Base URL, defaulting to `https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1`
+- Model, defaulting to `openai/gpt-4.1-mini`
+- Target language, defaulting to `Persian`
 
 ## Default Shortcut
 

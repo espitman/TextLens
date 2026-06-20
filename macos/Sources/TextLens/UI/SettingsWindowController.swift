@@ -2,13 +2,13 @@ import AppKit
 import SwiftUI
 
 final class SettingsWindowController: NSWindowController {
-    init() {
-        let hostingController = NSHostingController(rootView: SettingsView())
+    init(settingsStore: SettingsStore) {
+        let hostingController = NSHostingController(rootView: SettingsView(settingsStore: settingsStore))
         let window = NSWindow(contentViewController: hostingController)
         window.title = "TextLens Settings"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
-        window.setContentSize(NSSize(width: 420, height: 180))
+        window.setContentSize(NSSize(width: 520, height: 260))
         window.center()
 
         super.init(window: window)

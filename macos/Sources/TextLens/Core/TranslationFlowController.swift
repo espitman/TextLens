@@ -3,12 +3,25 @@ import AppKit
 final class TranslationFlowController {
     private(set) var isRunning = false
     private var selectionOverlayWindow: SelectionOverlayWindow?
+    private let settingsStore: SettingsStore
+    private let openSettings: () -> Void
     private let permissionService = PermissionService()
     private let screenshotService = ScreenshotService()
     private let ocrService = OCRService()
     private let errorPresenter = ErrorPresenter()
 
+    init(settingsStore: SettingsStore, openSettings: @escaping () -> Void) {
+        self.settingsStore = settingsStore
+        self.openSettings = openSettings
+    }
+
+    @MainActor
     func startTranslateArea() {
+        guard settingsStore.settings.hasAPIKey else {
+            openSettings()
+            return
+        }
+
         guard !isRunning else {
             return
         }

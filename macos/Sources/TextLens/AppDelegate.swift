@@ -1,9 +1,16 @@
 import AppKit
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
-    private let settingsWindowController = SettingsWindowController()
-    private let translationFlowController = TranslationFlowController()
+    private let settingsStore = SettingsStore()
+    private lazy var settingsWindowController = SettingsWindowController(settingsStore: settingsStore)
+    private lazy var translationFlowController = TranslationFlowController(
+        settingsStore: settingsStore,
+        openSettings: { [weak self] in
+            self?.settingsWindowController.show()
+        }
+    )
     private lazy var hotKeyService = HotKeyService { [weak self] in
         self?.translationFlowController.startTranslateArea()
     }

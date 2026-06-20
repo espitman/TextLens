@@ -114,25 +114,25 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 
 ## Phase 6: Settings
 
-- [ ] Define settings model
-  - [ ] Add `TranslationSettings`
-  - [ ] Store API Key
-  - [ ] Store Base URL
-  - [ ] Store Model
-  - [ ] Store target language, defaulting to Persian
+- [x] Define settings model
+  - [x] Add `TranslationSettings`
+  - [x] Store API Key
+  - [x] Store Base URL
+  - [x] Store Model
+  - [x] Store target language, defaulting to Persian
 
-- [ ] Implement settings persistence
-  - [ ] Use `UserDefaults` for MVP
-  - [ ] Add a TODO for moving API Key storage to Keychain
-  - [ ] Provide default Base URL: `https://api.openai.com/v1`
-  - [ ] Provide default model: `gpt-4o-mini`
+- [x] Implement settings persistence
+  - [x] Use `UserDefaults` for MVP
+  - [x] Add a TODO for moving API Key storage to Keychain
+  - [x] Provide default Base URL: `https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1`
+  - [x] Provide default model: `openai/gpt-4.1-mini`
 
-- [ ] Build settings UI
-  - [ ] Add API Key input
-  - [ ] Add Base URL input
-  - [ ] Add Model input
-  - [ ] Add Save behavior
-  - [ ] Open settings automatically when API Key is missing
+- [x] Build settings UI
+  - [x] Add API Key input
+  - [x] Add Base URL input
+  - [x] Add Model input
+  - [x] Add Save behavior
+  - [x] Open settings automatically when API Key is missing
 
 ## Phase 7: Translation API
 

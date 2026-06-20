@@ -6,7 +6,7 @@ struct TextLensApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView()
+            EmptyView()
         }
     }
 }

@@ -203,8 +203,8 @@ final class OCRService {
 Settings:
 
 - API Key
-- Base URL، پیش‌فرض: `https://api.openai.com/v1`
-- Model، پیش‌فرض قابل تغییر، مثلاً `gpt-4o-mini`
+- Base URL، پیش‌فرض: `https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1`
+- Model، پیش‌فرض قابل تغییر، مثلاً `openai/gpt-4.1-mini`
 - Target language، پیش‌فرض: Persian
 
 Prompt پیشنهادی:
