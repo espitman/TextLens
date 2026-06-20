@@ -3,11 +3,13 @@ import AppKit
 final class TranslationFlowController {
     private(set) var isRunning = false
     private var selectionOverlayWindow: SelectionOverlayWindow?
+    private var translationPopupWindow: TranslationPopupWindow?
     private let settingsStore: SettingsStore
     private let openSettings: () -> Void
     private let permissionService = PermissionService()
     private let screenshotService = ScreenshotService()
     private let ocrService = OCRService()
+    private let translationService: TranslationServiceProtocol = TranslationService()
     private let errorPresenter = ErrorPresenter()
 
     init(settingsStore: SettingsStore, openSettings: @escaping () -> Void) {
@@ -58,13 +60,25 @@ final class TranslationFlowController {
 
             let image = try screenshotService.capture(rect: selection.rect, displayID: selection.displayID)
             let recognizedText = try await ocrService.recognizeText(from: image)
+            let settings = await MainActor.run {
+                settingsStore.settings
+            }
+            let translatedText = try await translationService.translate(recognizedText, settings: settings)
             await MainActor.run {
-                errorPresenter.presentMessage(title: "Recognized Text", message: recognizedText)
+                showTranslationPopup(translatedText, near: selection.rect)
             }
         } catch {
             await MainActor.run {
                 errorPresenter.present(error)
             }
         }
+    }
+
+    @MainActor
+    private func showTranslationPopup(_ translatedText: String, near selectionRect: CGRect) {
+        translationPopupWindow?.close()
+        let popupWindow = TranslationPopupWindow(translatedText: translatedText, near: selectionRect)
+        translationPopupWindow = popupWindow
+        popupWindow.show()
     }
 }

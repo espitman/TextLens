@@ -136,45 +136,45 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 
 ## Phase 7: Translation API
 
-- [ ] Implement translation service protocol
-  - [ ] Add `TranslationServiceProtocol`
-  - [ ] Add `translateToPersian(_:) async throws -> String`
+- [x] Implement translation service protocol
+  - [x] Add `TranslationServiceProtocol`
+  - [x] Add `translateToPersian(_:) async throws -> String`
 
-- [ ] Implement OpenAI-compatible client
-  - [ ] Build chat completions request payload
-  - [ ] Use configurable Base URL
-  - [ ] Use configurable Model
-  - [ ] Send API Key in the Authorization header
-  - [ ] Decode the translated response text
+- [x] Implement OpenAI-compatible client
+  - [x] Build chat completions request payload
+  - [x] Use configurable Base URL
+  - [x] Use configurable Model
+  - [x] Send API Key in the Authorization header
+  - [x] Decode the translated response text
 
-- [ ] Implement translation prompt
-  - [ ] Ask for accurate, natural Persian translation
-  - [ ] Prevent extra explanations
-  - [ ] Keep UI labels concise
+- [x] Implement translation prompt
+  - [x] Ask for accurate, natural Persian translation
+  - [x] Prevent extra explanations
+  - [x] Keep UI labels concise
 
-- [ ] Handle API failures
-  - [ ] Detect missing API Key before sending a request
-  - [ ] Show simple errors for network failures
-  - [ ] Show simple errors for non-2xx API responses
-  - [ ] Handle malformed API responses gracefully
+- [x] Handle API failures
+  - [x] Detect missing API Key before sending a request
+  - [x] Show simple errors for network failures
+  - [x] Show simple errors for non-2xx API responses
+  - [x] Handle malformed API responses gracefully
 
 ## Phase 8: Translation Popup
 
-- [ ] Create popup window
-  - [ ] Position it near the selected screen area
-  - [ ] Keep it visually lightweight and macOS-native
-  - [ ] Ensure it appears above normal windows
+- [x] Create popup window
+  - [x] Position it near the selected screen area
+  - [x] Keep it visually lightweight and macOS-native
+  - [x] Ensure it appears above normal windows
 
-- [ ] Build popup content
-  - [ ] Show translated Persian text
-  - [ ] Add Copy button
-  - [ ] Add Close button
-  - [ ] Support multiline translated text
+- [x] Build popup content
+  - [x] Show translated Persian text
+  - [x] Add Copy button
+  - [x] Add Close button
+  - [x] Support multiline translated text
 
-- [ ] Implement interactions
-  - [ ] Copy translation to clipboard
-  - [ ] Close popup on Escape
-  - [ ] Close popup when the user clicks outside if feasible for MVP
+- [x] Implement interactions
+  - [x] Copy translation to clipboard
+  - [x] Close popup on Escape
+  - [x] Close popup when the user clicks outside if feasible for MVP
 
 ## Phase 9: Main Flow Integration
 

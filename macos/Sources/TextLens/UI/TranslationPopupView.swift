@@ -2,26 +2,38 @@ import SwiftUI
 
 struct TranslationPopupView: View {
     let translatedText: String
+    let onCopy: () -> Void
+    let onClose: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(translatedText)
-                .textSelection(.enabled)
+            ScrollView {
+                Text(translatedText)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .multilineTextAlignment(.trailing)
+                    .textSelection(.enabled)
+                    .environment(\.layoutDirection, .rightToLeft)
+            }
+            .frame(maxHeight: 150)
 
             HStack {
-                Button("Copy") {
-                    // TODO: Copy translation in Phase 8.
-                }
-                Button("Close") {
-                    // TODO: Close popup window in Phase 8.
-                }
+                Button("Copy", action: onCopy)
+                Spacer()
+                Button("Close", action: onClose)
+                    .keyboardShortcut(.cancelAction)
             }
         }
-        .padding()
-        .frame(minWidth: 280, idealWidth: 360)
+        .padding(16)
+        .frame(width: 420)
+        .frame(minHeight: 160)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
 #Preview {
-    TranslationPopupView(translatedText: "ترجمه اینجا نمایش داده می‌شود.")
+    TranslationPopupView(
+        translatedText: "ترجمه اینجا نمایش داده می‌شود.",
+        onCopy: {},
+        onClose: {}
+    )
 }
