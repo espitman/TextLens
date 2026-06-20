@@ -25,73 +25,73 @@ This document breaks the TextLens MVP into implementation phases with tasks and 
 
 ## Phase 1: Menu Bar Shell
 
-- [ ] Implement app lifecycle
-  - [ ] Add `TextLensApp`
-  - [ ] Add `AppDelegate`
-  - [ ] Prevent a default app window from opening on launch
+- [x] Implement app lifecycle
+  - [x] Add `TextLensApp`
+  - [x] Add `AppDelegate`
+  - [x] Prevent a default app window from opening on launch
 
-- [ ] Implement menu bar controller
-  - [ ] Add TextLens menu bar icon
-  - [ ] Add `Translate Area` menu item
-  - [ ] Add `Settings` menu item
-  - [ ] Add `Quit` menu item
+- [x] Implement menu bar controller
+  - [x] Add TextLens menu bar icon
+  - [x] Add `Translate Area` menu item
+  - [x] Add `Settings` menu item
+  - [x] Add `Quit` menu item
 
-- [ ] Wire basic actions
-  - [ ] Make `Translate Area` start the translation flow
-  - [ ] Make `Settings` open the settings window
-  - [ ] Make `Quit` terminate the app
+- [x] Wire basic actions
+  - [x] Make `Translate Area` start the translation flow
+  - [x] Make `Settings` open the settings window
+  - [x] Make `Quit` terminate the app
 
 ## Phase 2: Global Hotkey
 
-- [ ] Implement global hotkey support
-  - [ ] Register `Command + Shift + T`
-  - [ ] Trigger the same flow as `Translate Area`
-  - [ ] Unregister the hotkey cleanly on app shutdown
+- [x] Implement global hotkey support
+  - [x] Register `Command + Shift + T`
+  - [x] Trigger the same flow as `Translate Area`
+  - [x] Unregister the hotkey cleanly on app shutdown
 
 - [ ] Validate hotkey behavior
   - [ ] Confirm the shortcut works while TextLens is not focused
-  - [ ] Confirm repeated shortcut presses do not create duplicate overlays
-  - [ ] Add graceful handling if hotkey registration fails
+  - [x] Confirm repeated shortcut presses do not create duplicate overlays
+  - [x] Add graceful handling if hotkey registration fails
 
 ## Phase 3: Selection Overlay
 
-- [ ] Create the selection overlay window
-  - [ ] Use a borderless `NSWindow`
-  - [ ] Display it above normal windows
-  - [ ] Apply a semi-transparent dark background
-  - [ ] Cover at least the primary display for MVP
+- [x] Create the selection overlay window
+  - [x] Use a borderless `NSWindow`
+  - [x] Display it above normal windows
+  - [x] Apply a semi-transparent dark background
+  - [x] Cover at least the primary display for MVP
 
-- [ ] Implement drag selection
-  - [ ] Track mouse down position
-  - [ ] Update the selection rectangle during drag
-  - [ ] Draw a clear border around the selected area
-  - [ ] Normalize rectangles dragged in any direction
+- [x] Implement drag selection
+  - [x] Track mouse down position
+  - [x] Update the selection rectangle during drag
+  - [x] Draw a clear border around the selected area
+  - [x] Normalize rectangles dragged in any direction
 
-- [ ] Implement cancellation and completion
-  - [ ] Close the overlay on Escape
-  - [ ] Return the selected rectangle on mouse up
-  - [ ] Ignore selections that are too small
-  - [ ] Add a TODO for improved multi-display support
+- [x] Implement cancellation and completion
+  - [x] Close the overlay on Escape
+  - [x] Return the selected rectangle on mouse up
+  - [x] Ignore selections that are too small
+  - [x] Add a TODO for improved multi-display support
 
 ## Phase 4: Screen Capture
 
-- [ ] Implement `ScreenshotService`
-  - [ ] Capture the selected display using `CGDisplayCreateImage`
-  - [ ] Crop the image to the selected rectangle
-  - [ ] Return a `CGImage`
-  - [ ] Avoid writing screenshots to disk
+- [x] Implement `ScreenshotService`
+  - [x] Capture the selected display using `CGDisplayCreateImage`
+  - [x] Crop the image to the selected rectangle
+  - [x] Return a `CGImage`
+  - [x] Avoid writing screenshots to disk
 
-- [ ] Handle screen recording permission
-  - [ ] Add `PermissionService`
-  - [ ] Detect missing Screen Recording permission
-  - [ ] Show a clear permission message
-  - [ ] Open the correct System Settings screen when possible
-  - [ ] Ensure missing permission does not crash the app
+- [x] Handle screen recording permission
+  - [x] Add `PermissionService`
+  - [x] Detect missing Screen Recording permission
+  - [x] Show a clear permission message
+  - [x] Open the correct System Settings screen when possible
+  - [x] Ensure missing permission does not crash the app
 
 - [ ] Validate capture behavior
   - [ ] Confirm capture works on the primary display
   - [ ] Confirm the crop matches the selected area
-  - [ ] Handle invalid capture or crop failures with user-facing errors
+  - [x] Handle invalid capture or crop failures with user-facing errors
 
 ## Phase 5: OCR
 

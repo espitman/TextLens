@@ -1,12 +1,27 @@
 import AppKit
 
 enum TextLensError: LocalizedError {
+    case hotKeyRegistrationFailed(status: OSStatus)
+    case invalidSelection
     case notImplemented(String)
+    case screenRecordingPermissionMissing
+    case screenshotCaptureFailed
+    case screenshotCropFailed
 
     var errorDescription: String? {
         switch self {
+        case .hotKeyRegistrationFailed(let status):
+            return "Could not register the Command + Shift + T shortcut. It may already be used by another app. OSStatus: \(status)"
+        case .invalidSelection:
+            return "The selected area is too small or outside the current display."
         case .notImplemented(let message):
             return message
+        case .screenRecordingPermissionMissing:
+            return "TextLens needs Screen Recording permission to read text from the selected area of your screen."
+        case .screenshotCaptureFailed:
+            return "TextLens could not capture the selected screen area."
+        case .screenshotCropFailed:
+            return "TextLens could not crop the selected screen area."
         }
     }
 }

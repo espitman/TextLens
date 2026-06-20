@@ -1,12 +1,21 @@
+import AppKit
+import CoreGraphics
 import Foundation
 
 final class PermissionService {
     func hasScreenRecordingPermission() -> Bool {
-        // TODO: Implement Screen Recording permission detection in Phase 4.
-        false
+        CGPreflightScreenCaptureAccess()
+    }
+
+    @discardableResult
+    func requestScreenRecordingPermission() -> Bool {
+        CGRequestScreenCaptureAccess()
     }
 
     func openScreenRecordingSettings() {
-        // TODO: Open System Settings privacy pane in Phase 4.
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+        if let url {
+            NSWorkspace.shared.open(url)
+        }
     }
 }

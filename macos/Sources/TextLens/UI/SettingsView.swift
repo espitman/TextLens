@@ -9,7 +9,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .frame(width: 420)
+        .frame(width: 420, height: 180)
     }
 }
 
