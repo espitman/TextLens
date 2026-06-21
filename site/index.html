@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TextLens - Screen OCR Translation for macOS</title>
+    <meta
+      name="description"
+      content="TextLens translates selected screen areas into Persian with OCR, menu bar controls, OpenRouter and Liara support, and a compact macOS popup."
+    />
+    <meta property="og:title" content="TextLens" />
+    <meta property="og:description" content="Select any area on your Mac screen and translate it into Persian." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="assets/textlens-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="shell nav-inner">
+        <a class="brand" href="#">
+          <img src="assets/textlens-icon.svg" alt="" />
+          <span>TextLens</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#install">Install</a>
+          <a class="button secondary" href="https://github.com/espitman/TextLens">GitHub</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <section class="shell hero">
+        <div>
+          <span class="eyebrow">macOS menu bar translator</span>
+          <h1>TextLens</h1>
+          <p class="hero-copy">
+            Select a piece of your screen, let TextLens read it with OCR, and get a Persian translation in a fast,
+            draggable popup built for day-to-day reading.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/espitman/TextLens/releases/latest">Download DMG</a>
+            <a class="button secondary" href="#install">How it works</a>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="TextLens app preview">
+          <div class="desktop-frame">
+            <div class="screen-bar">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <div class="article">
+              <h2>Selected article text</h2>
+              <p>
+                TextLens sits quietly in the menu bar. Press the shortcut, drag over any readable area, and keep
+                working while OCR and translation run.
+              </p>
+              <p>
+                It is designed for screenshots, web pages, PDFs, presentations, and any app where text cannot be
+                copied directly.
+              </p>
+              <p>
+                Provider settings are available from the popover with separate OpenRouter and Liara profiles.
+              </p>
+            </div>
+            <div class="selection"></div>
+          </div>
+
+          <div class="popup">
+            <div class="popup-head">
+              <div class="popup-title">
+                <img src="assets/textlens-icon.svg" alt="" />
+                <span>TextLens</span>
+              </div>
+              <strong class="persian">ترجمه</strong>
+            </div>
+            <div class="translation-card persian">
+              متن انتخاب شده از صفحه خوانده می‌شود و ترجمه فارسی آن در یک پنجره کوچک، راست‌چین و قابل جابه‌جایی نمایش داده می‌شود.
+            </div>
+            <span class="cost persian">هزینه: ۱۲ تومان</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="shell features">
+        <article class="feature">
+          <b>Area selection</b>
+          <p>Use the global shortcut to draw over exactly the text you want, with a custom TextLens cursor.</p>
+        </article>
+        <article class="feature">
+          <b>Persian-first popup</b>
+          <p>Translations open instantly in a compact RTL popup with copy, retry, cost badge, and drag support.</p>
+        </article>
+        <article class="feature">
+          <b>Provider control</b>
+          <p>Switch between OpenRouter and Liara, choose the model, and retry failed translations without reopening settings.</p>
+        </article>
+      </section>
+
+      <section id="install" class="install">
+        <div class="shell install-panel">
+          <div>
+            <h2>Install on macOS</h2>
+            <p>
+              Download the latest DMG, drag TextLens into Applications, grant Screen Recording permission, then use
+              Command + Shift + 0 from anywhere.
+            </p>
+          </div>
+          <ol class="steps">
+            <li>Open the DMG and move TextLens to Applications.</li>
+            <li>Open TextLens from the menu bar and configure an API provider.</li>
+            <li>Press Command + Shift + 0, select text on screen, and translate.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell">TextLens is an early macOS release. Android and more platforms are planned later.</div>
+    </footer>
+  </body>
+</html>

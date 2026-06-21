@@ -10,6 +10,8 @@ The first implementation target is macOS. Android and other platforms are planne
 TextLens/
   macos/         macOS app implementation
   docs/          product specs and implementation plans
+  site/          GitHub Pages landing page
+  scripts/       release and packaging scripts
 ```
 
 ## Current App
@@ -34,6 +36,30 @@ Build, install, and run it from the repository root with:
 ```
 
 The script creates `/Applications/TextLens.app` and opens it. This gives macOS a stable app identity for Screen Recording permission.
+
+## Release Build
+
+Create a distributable macOS DMG with:
+
+```sh
+./scripts/build-dmg.sh 0.1.0
+```
+
+The DMG is written to `dist/TextLens-0.1.0.dmg`.
+
+Latest release:
+
+- [Download TextLens](https://github.com/espitman/TextLens/releases/latest)
+
+## Website
+
+The GitHub Pages site lives in:
+
+```text
+site
+```
+
+It is deployed by `.github/workflows/pages.yml`.
 
 ## Documentation
 
