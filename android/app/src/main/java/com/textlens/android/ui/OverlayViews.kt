@@ -23,6 +23,7 @@ class SelectionOverlayView(
     context: Context,
     private val initialCenterX: Float? = null,
     private val initialCenterY: Float? = null,
+    private val initialArea: ScreenArea? = null,
     private val onComplete: (ScreenArea?) -> Unit,
 ) : View(context) {
     private enum class DragMode {
@@ -162,6 +163,16 @@ class SelectionOverlayView(
 
     private fun ensureInitialRect() {
         if (!selectionRect.isEmpty || width == 0 || height == 0) return
+        initialArea?.let { area ->
+            selectionRect.set(
+                area.left.toFloat(),
+                area.top.toFloat(),
+                (area.left + area.width).toFloat(),
+                (area.top + area.height).toFloat(),
+            )
+            clampSelection()
+            return
+        }
         val rectWidth = width * 0.72f
         val rectHeight = height * 0.24f
         val centerX = initialCenterX ?: (width / 2f)
@@ -188,7 +199,7 @@ class SelectionOverlayView(
     private fun clampSelection() {
         val maxBottom = height - 92f
         if (selectionRect.left < 16f) selectionRect.offset(16f - selectionRect.left, 0f)
-        if (selectionRect.top < 72f) selectionRect.offset(0f, 72f - selectionRect.top)
+        if (selectionRect.top < 16f) selectionRect.offset(0f, 16f - selectionRect.top)
         if (selectionRect.right > width - 16f) selectionRect.offset(width - 16f - selectionRect.right, 0f)
         if (selectionRect.bottom > maxBottom) selectionRect.offset(0f, maxBottom - selectionRect.bottom)
     }
