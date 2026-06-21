@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.TextDirectionHeuristics
 import android.view.MotionEvent
 import android.view.View
 import com.textlens.android.core.ScreenArea
@@ -207,11 +208,14 @@ class SelectionOverlayView(
     }
 
     private fun completeSelection() {
+        val captureRect = RectF(selectionRect).apply {
+            inset(8f, 8f)
+        }
         val area = ScreenArea(
-            left = selectionRect.left.toInt(),
-            top = selectionRect.top.toInt(),
-            width = selectionRect.width().toInt(),
-            height = selectionRect.height().toInt(),
+            left = captureRect.left.toInt(),
+            top = captureRect.top.toInt(),
+            width = captureRect.width().toInt(),
+            height = captureRect.height().toInt(),
         )
         onComplete(area.takeIf { it.isMeaningful })
     }
@@ -287,6 +291,7 @@ class TranslationPopupView(context: Context) : View(context) {
     private var resultContentHeight = 0f
 
     override fun onDraw(canvas: Canvas) {
+        resetMainTextPaint()
         val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
         canvas.drawRoundRect(bounds, 34f, 34f, bgPaint)
         canvas.drawRoundRect(bounds.insetCopy(2f), 34f, 34f, borderPaint)
@@ -351,12 +356,14 @@ class TranslationPopupView(context: Context) : View(context) {
 
     private fun drawResult(canvas: Canvas, result: State.Result) {
         val textArea = Rect(34, 108, width - 34, height - 104)
-        val layout = StaticLayout.Builder.obtain(result.text, 0, result.text.length, textPaint.apply {
-            textSize = 28f
-            textAlign = Paint.Align.RIGHT
+        val displayText = result.text.normalizedForPersianDisplay()
+        val layout = StaticLayout.Builder.obtain(displayText, 0, displayText.length, textPaint.apply {
+            textSize = 24f
+            textAlign = Paint.Align.LEFT
         }, textArea.width())
-            .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
-            .setLineSpacing(7f, 1f)
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setTextDirection(TextDirectionHeuristics.RTL)
+            .setLineSpacing(8f, 1f)
             .setIncludePad(false)
             .build()
         resultContentHeight = layout.height.toFloat()
@@ -374,16 +381,26 @@ class TranslationPopupView(context: Context) : View(context) {
         drawButton(canvas, closeRect.setAndReturn(width - 148f, height - 72f, width - 28f, height - 22f), "بستن")
     }
 
+    private fun resetMainTextPaint() {
+        textPaint.color = Color.rgb(247, 240, 220)
+        textPaint.textSize = 34f
+        textPaint.textAlign = Paint.Align.LEFT
+        textPaint.typeface = persianTypeface(context)
+    }
+
     private fun drawError(canvas: Canvas, message: String) {
         textPaint.color = Color.rgb(255, 95, 95)
         textPaint.textAlign = Paint.Align.CENTER
         canvas.drawText("!", width / 2f, 142f, textPaint.apply { textSize = 48f })
-        val layout = StaticLayout.Builder.obtain(message, 0, message.length, textPaint.apply { textSize = 26f }, width - 80)
+        val safeMessage = message.ifBlank { "خطای نامشخص رخ داد." }
+        val contentWidth = (width - 72).coerceAtLeast(160)
+        val layout = StaticLayout.Builder.obtain(safeMessage, 0, safeMessage.length, textPaint.apply { textSize = 22f }, contentWidth)
             .setAlignment(Layout.Alignment.ALIGN_CENTER)
             .setLineSpacing(6f, 1f)
+            .setIncludePad(false)
             .build()
         canvas.save()
-        canvas.translate(40f, 174f)
+        canvas.translate(((width - contentWidth) / 2f), 174f)
         layout.draw(canvas)
         canvas.restore()
         textPaint.color = Color.rgb(247, 240, 220)
@@ -406,6 +423,16 @@ private fun RectF.setAndReturn(left: Float, top: Float, right: Float, bottom: Fl
     set(left, top, right, bottom)
     return this
 }
+
+private fun String.normalizedForPersianDisplay(): String =
+    replace('\u00A0', ' ')
+        .replace("\t", " ")
+        .lines()
+        .joinToString("\n") { line ->
+            line.trim().replace(Regex(" {2,}"), " ")
+        }
+        .replace(Regex("\n{3,}"), "\n\n")
+        .trim()
 
 private fun persianTypeface(context: Context): Typeface =
     runCatching { Typeface.createFromAsset(context.assets, "fonts/Vazirmatn.ttf") }

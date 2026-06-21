@@ -8,6 +8,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
@@ -19,6 +20,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.textlens.android.MainActivity
 import com.textlens.android.R
 import com.textlens.android.data.SettingsStore
@@ -54,7 +56,7 @@ class FloatingBubbleService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        startForeground(NOTIFICATION_ID, notification())
+        startBubbleForeground()
         showBubble()
     }
 
@@ -71,6 +73,7 @@ class FloatingBubbleService : Service() {
 
     override fun onDestroy() {
         activeJob?.cancel()
+        captureService.close()
         removeBubble()
         removeSelection()
         removePopup()
@@ -153,8 +156,7 @@ class FloatingBubbleService : Service() {
 
     private fun startSelection() {
         if (MediaProjectionSession.grant == null) {
-            showErrorPopup("Screen capture permission is required. Open TextLens and press Request in Permission Flow.")
-            openSettings()
+            showErrorPopup("Screen capture permission is required. Long press the bubble to open TextLens, then press Request in Permission Flow.")
             return
         }
         bubbleView?.visibility = View.GONE
@@ -180,10 +182,12 @@ class FloatingBubbleService : Service() {
 
     private fun runTranslation(area: ScreenArea) {
         activeJob?.cancel()
-        val popup = showLoadingPopup()
         activeJob = scope.launch {
+            var popup: TranslationPopupView? = null
             try {
+                startCaptureForeground()
                 val bitmap = captureService.capture(area)
+                popup = showLoadingPopup()
                 val recognizedText = try {
                     ocrEngine.recognizeText(bitmap)
                 } finally {
@@ -192,13 +196,18 @@ class FloatingBubbleService : Service() {
                 val settings = settingsStore.settings.first()
                 val output = translationClient.translate(recognizedText, settings)
                 lastTranslation = output
-                popup.state = TranslationPopupView.State.Result(
+                popup?.state = TranslationPopupView.State.Result(
                     text = output.text,
                     model = output.model,
                     costToman = output.costToman,
                 )
             } catch (error: Throwable) {
-                popup.state = TranslationPopupView.State.Error(error.message ?: "TextLens could not translate the selected area.")
+                val visiblePopup = popup ?: showLoadingPopup()
+                visiblePopup.state = TranslationPopupView.State.Error(error.message ?: "TextLens could not translate the selected area.")
+            } finally {
+                if (!captureService.hasActiveProjection) {
+                    startBubbleForeground()
+                }
             }
         }
     }
@@ -209,6 +218,7 @@ class FloatingBubbleService : Service() {
             state = TranslationPopupView.State.Loading
             onClose = {
                 activeJob?.cancel()
+                activeJob = null
                 removePopup()
             }
             onRetry = {
@@ -223,14 +233,18 @@ class FloatingBubbleService : Service() {
                 lastTranslation?.let { copyText(it.text) }
             }
         }
-        val params = overlayParams(width = dp(520), height = dp(360)).apply {
-            gravity = Gravity.TOP or Gravity.END
-            x = dp(18)
-            y = dp(160)
+        val screenWidth = resources.displayMetrics.widthPixels
+        val screenHeight = resources.displayMetrics.heightPixels
+        val popupWidth = minOf(dp(440), screenWidth - dp(40))
+        val popupHeight = minOf(dp(320), screenHeight - dp(96))
+        val params = overlayParams(width = popupWidth, height = popupHeight).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = (screenWidth - popupWidth - dp(20)).coerceIn(dp(12), (screenWidth - popupWidth - dp(12)).coerceAtLeast(dp(12)))
+            y = dp(96).coerceIn(dp(12), (screenHeight - popupHeight - dp(12)).coerceAtLeast(dp(12)))
         }
         popup.onDragBy = { dx, dy ->
-            params.x -= dx
-            params.y += dy
+            params.x = (params.x + dx).coerceIn(dp(8), (screenWidth - popupWidth - dp(8)).coerceAtLeast(dp(8)))
+            params.y = (params.y + dy).coerceIn(dp(8), (screenHeight - popupHeight - dp(8)).coerceAtLeast(dp(8)))
             windowManager.updateViewLayout(popup, params)
         }
         windowManager.addView(popup, params)
@@ -294,12 +308,32 @@ class FloatingBubbleService : Service() {
             width,
             height,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
         )
 
-    private fun notification(): android.app.Notification {
+    private fun startBubbleForeground() {
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification("Floating bubble is active"),
+            foregroundType(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE),
+        )
+    }
+
+    private fun startCaptureForeground() {
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification("Capturing selected area"),
+            foregroundType(ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION),
+        )
+    }
+
+    private fun foregroundType(type: Int): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) type else 0
+
+    private fun notification(content: String): android.app.Notification {
         val channelId = "textlens_bubble"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
@@ -322,7 +356,7 @@ class FloatingBubbleService : Service() {
         return NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_textlens)
             .setContentTitle("TextLens")
-            .setContentText("Floating bubble is active")
+            .setContentText(content)
             .setContentIntent(openIntent)
             .addAction(0, "Stop", stopIntent)
             .setOngoing(true)

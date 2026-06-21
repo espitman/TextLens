@@ -64,6 +64,8 @@ import com.textlens.android.core.MediaProjectionSession
 import com.textlens.android.core.ScreenCaptureGrant
 import com.textlens.android.core.screenCaptureGrantOrNull
 import com.textlens.android.ui.TextLensAndroidTheme
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val AppBlack = Color(0xFF070707)
@@ -101,6 +103,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         permissionController = AndroidPermissionController(this)
         refreshPermissionState()
+        importSettingsFromIntent(intent)
 
         setContent {
             TextLensAndroidTheme {
@@ -142,6 +145,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        importSettingsFromIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         if (::permissionController.isInitialized) {
@@ -154,6 +163,50 @@ class MainActivity : ComponentActivity() {
             screenCaptureGrant = screenCaptureGrant,
             screenCaptureMessage = screenCaptureMessage,
         )
+    }
+
+    private fun importSettingsFromIntent(intent: Intent?) {
+        if (intent == null || !intent.hasExtra(EXTRA_IMPORT_SETTINGS)) return
+
+        lifecycleScope.launch {
+            val store = SettingsStore(applicationContext)
+            val current = store.settings.first()
+            val openRouter = current.openRouter.copy(
+                apiKey = intent.getStringExtra(EXTRA_OPENROUTER_API_KEY) ?: current.openRouter.apiKey,
+                baseUrl = intent.getStringExtra(EXTRA_OPENROUTER_BASE_URL) ?: current.openRouter.baseUrl,
+                model = intent.getStringExtra(EXTRA_OPENROUTER_MODEL) ?: current.openRouter.model,
+            )
+            val liara = current.liara.copy(
+                apiKey = intent.getStringExtra(EXTRA_LIARA_API_KEY) ?: current.liara.apiKey,
+                baseUrl = intent.getStringExtra(EXTRA_LIARA_BASE_URL) ?: current.liara.baseUrl,
+                model = intent.getStringExtra(EXTRA_LIARA_MODEL) ?: current.liara.model,
+            )
+            val provider = intent.getStringExtra(EXTRA_PROVIDER)
+                ?.let { runCatching { TranslationProvider.valueOf(it) }.getOrNull() }
+                ?: current.provider
+            val targetLanguage = intent.getStringExtra(EXTRA_TARGET_LANGUAGE) ?: current.targetLanguage
+
+            store.save(
+                current.copy(
+                    provider = provider,
+                    openRouter = openRouter,
+                    liara = liara,
+                    targetLanguage = targetLanguage,
+                ),
+            )
+        }
+    }
+
+    companion object {
+        private const val EXTRA_IMPORT_SETTINGS = "textlens_import_settings"
+        private const val EXTRA_OPENROUTER_API_KEY = "openrouter_api_key"
+        private const val EXTRA_OPENROUTER_BASE_URL = "openrouter_base_url"
+        private const val EXTRA_OPENROUTER_MODEL = "openrouter_model"
+        private const val EXTRA_LIARA_API_KEY = "liara_api_key"
+        private const val EXTRA_LIARA_BASE_URL = "liara_base_url"
+        private const val EXTRA_LIARA_MODEL = "liara_model"
+        private const val EXTRA_PROVIDER = "provider"
+        private const val EXTRA_TARGET_LANGUAGE = "target_language"
     }
 }
 
@@ -177,6 +230,7 @@ private fun TextLensSettingsApp(
     var liaraModel by remember { mutableStateOf(settings.liara.model) }
     var targetLanguage by remember { mutableStateOf(settings.targetLanguage) }
     var savedMessage by remember { mutableStateOf("") }
+    var isBubbleRunning by remember { mutableStateOf(false) }
 
     LaunchedEffect(settings) {
         selectedProvider = settings.provider
@@ -232,8 +286,16 @@ private fun TextLensSettingsApp(
                 onOpenOverlaySettings = onOpenOverlaySettings,
                 onRequestScreenCapture = onRequestScreenCapture,
                 onRequestNotifications = onRequestNotifications,
-                onStartBubble = onStartBubble,
-                onStopBubble = onStopBubble,
+                isBubbleRunning = isBubbleRunning,
+                onToggleBubble = {
+                    if (isBubbleRunning) {
+                        onStopBubble()
+                        isBubbleRunning = false
+                    } else {
+                        onStartBubble()
+                        isBubbleRunning = true
+                    }
+                },
             )
             SettingsPanel(
                 selectedProvider = selectedProvider,
@@ -354,8 +416,8 @@ private fun PermissionPanel(
     onOpenOverlaySettings: () -> Unit,
     onRequestScreenCapture: () -> Unit,
     onRequestNotifications: () -> Unit,
-    onStartBubble: () -> Unit,
-    onStopBubble: () -> Unit,
+    isBubbleRunning: Boolean,
+    onToggleBubble: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -410,36 +472,21 @@ private fun PermissionPanel(
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isBubbleRunning) Color.White.copy(alpha = 0.10f) else Gold,
+                contentColor = if (isBubbleRunning) TextPrimary else AppBlack,
+            ),
+            shape = RoundedCornerShape(16.dp),
+            onClick = onToggleBubble,
         ) {
-            Button(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Gold,
-                    contentColor = AppBlack,
-                ),
-                shape = RoundedCornerShape(15.dp),
-                onClick = onStartBubble,
-            ) {
-                Text("Start Bubble", fontWeight = FontWeight.Bold)
-            }
-            Button(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.10f),
-                    contentColor = TextPrimary,
-                ),
-                shape = RoundedCornerShape(15.dp),
-                onClick = onStopBubble,
-            ) {
-                Text("Stop", fontWeight = FontWeight.Bold)
-            }
+            Text(
+                text = if (isBubbleRunning) "Stop Bubble" else "Start Bubble",
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
