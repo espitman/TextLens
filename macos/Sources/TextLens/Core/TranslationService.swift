@@ -24,6 +24,9 @@ final class TranslationService: TranslationServiceProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(settings.apiKey)", forHTTPHeaderField: "Authorization")
+        if settings.provider == .openRouter {
+            request.setValue("TextLens", forHTTPHeaderField: "X-OpenRouter-Title")
+        }
         request.timeoutInterval = 60
         request.httpBody = try JSONEncoder().encode(
             ChatCompletionRequest(

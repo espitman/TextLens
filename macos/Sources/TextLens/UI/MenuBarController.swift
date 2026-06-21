@@ -21,19 +21,40 @@ final class MenuBarController: NSObject {
 
     private func configureStatusItem() {
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: "TextLens")
-            button.imagePosition = .imageLeading
-            button.title = "TextLens"
+            button.image = Self.menuBarIcon()
+            button.imagePosition = .imageOnly
+            button.title = ""
             button.toolTip = "TextLens"
+            button.action = #selector(openSettings)
+            button.target = self
         }
+    }
 
-        let menu = NSMenu()
-        menu.addItem(menuItem(title: "Translate Area", action: #selector(translateArea), keyEquivalent: "0", modifiers: [.command, .shift]))
-        menu.addItem(menuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ",", modifiers: [.command]))
-        menu.addItem(.separator())
-        menu.addItem(menuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q", modifiers: [.command]))
+    func attachSettingsPopover(_ popoverController: SettingsPopoverController) {
+        popoverController.attach(to: statusItem)
+    }
 
-        statusItem.menu = menu
+    private static func menuBarIcon() -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18))
+        image.lockFocus()
+
+        NSColor.labelColor.set()
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 15, weight: .bold),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: paragraphStyle,
+        ]
+        NSString(string: "T").draw(
+            in: NSRect(x: 0, y: 0, width: 18, height: 17),
+            withAttributes: attributes
+        )
+
+        image.unlockFocus()
+        image.isTemplate = true
+        image.accessibilityDescription = "TextLens"
+        return image
     }
 
     private func menuItem(

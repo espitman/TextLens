@@ -12,9 +12,12 @@ final class TranslationPopupViewModel: ObservableObject {
 }
 
 struct TranslationPopupView: View {
-    static let popupSize = CGSize(width: 1170, height: 750)
+    static let popupWidth: CGFloat = 1170
+    static let maxPopupHeight: CGFloat = 750
+    static let loadingHeight: CGFloat = 360
 
     @ObservedObject var viewModel: TranslationPopupViewModel
+    let popupHeight: CGFloat
     let onCopy: () -> Void
     let onCancel: () -> Void
     let onClose: () -> Void
@@ -31,7 +34,7 @@ struct TranslationPopupView: View {
 
             content
                 .frame(maxWidth: .infinity)
-                .frame(height: 560)
+                .frame(height: contentHeight)
                 .padding(.horizontal, 28)
                 .padding(.vertical, 24)
 
@@ -42,7 +45,7 @@ struct TranslationPopupView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 22)
         }
-        .frame(width: Self.popupSize.width, height: Self.popupSize.height)
+        .frame(width: Self.popupWidth, height: popupHeight)
         .background(panelBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -72,7 +75,7 @@ struct TranslationPopupView: View {
                 }
 
                 Text("ترجمه")
-                    .font(.custom("Vazirmatn", size: 24).weight(.bold))
+                    .font(.custom("Vazirmatn", size: 20).weight(.semibold))
                     .foregroundStyle(.black.opacity(0.86))
                     .environment(\.layoutDirection, .rightToLeft)
             }
@@ -83,21 +86,12 @@ struct TranslationPopupView: View {
     private var content: some View {
         switch viewModel.state {
         case .loading:
-            HStack {
-                Spacer()
-
+            ZStack {
                 ProgressView()
                     .controlSize(.large)
-                    .scaleEffect(1.12)
-
-                Spacer()
-
-                Text("در حال خواندن و ترجمه...")
-                    .font(.custom("Vazirmatn", size: 21).weight(.medium))
-                    .foregroundStyle(.black.opacity(0.84))
-                    .multilineTextAlignment(.trailing)
-                    .environment(\.layoutDirection, .rightToLeft)
+                    .scaleEffect(1.08)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
         case .result(let text, _):
             ScrollView {
@@ -148,7 +142,7 @@ struct TranslationPopupView: View {
         switch viewModel.state {
         case .loading:
             Button("لغو", action: onCancel)
-                .font(.custom("Vazirmatn", size: 13).weight(.medium))
+                .font(.system(size: 13, weight: .regular))
                 .buttonStyle(.bordered)
                 .controlSize(.regular)
                 .keyboardShortcut(.cancelAction)
@@ -186,6 +180,10 @@ struct TranslationPopupView: View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(.ultraThinMaterial)
             .overlay(Color.white.opacity(0.46))
+    }
+
+    private var contentHeight: CGFloat {
+        max(120, popupHeight - 190)
     }
 
     private func rtlText(_ text: String) -> String {
@@ -270,6 +268,7 @@ private struct CostBadge: View {
             )
             return model
         }(),
+        popupHeight: 420,
         onCopy: {},
         onCancel: {},
         onClose: {}

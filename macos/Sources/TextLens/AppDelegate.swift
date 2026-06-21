@@ -3,32 +3,49 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
+    private var settingsPopoverController: SettingsPopoverController?
+    private var translationFlowController: TranslationFlowController?
     private let settingsStore = SettingsStore()
-    private lazy var settingsWindowController = SettingsWindowController(settingsStore: settingsStore)
-    private lazy var translationFlowController = TranslationFlowController(
-        settingsStore: settingsStore,
-        openSettings: { [weak self] in
-            self?.settingsWindowController.show()
-        }
-    )
     private lazy var hotKeyService = HotKeyService { [weak self] in
-        self?.translationFlowController.startTranslateArea()
+        self?.translationFlowController?.startTranslateArea()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         FontRegistrar.registerBundledFonts()
         NSApp.setActivationPolicy(.accessory)
-        menuBarController = MenuBarController(
-            onTranslateArea: { [weak self] in
-                self?.translationFlowController.startTranslateArea()
-            },
-            onOpenSettings: { [weak self] in
-                self?.settingsWindowController.show()
+
+        let translationFlowController = TranslationFlowController(
+            settingsStore: settingsStore,
+            openSettings: { [weak self] in
+                self?.settingsPopoverController?.show()
+            }
+        )
+        let settingsPopoverController = SettingsPopoverController(
+            settingsStore: settingsStore,
+            onTranslateArea: {
+                translationFlowController.startTranslateArea()
             },
             onQuit: {
                 NSApp.terminate(nil)
             }
         )
+        self.translationFlowController = translationFlowController
+        self.settingsPopoverController = settingsPopoverController
+
+        menuBarController = MenuBarController(
+            onTranslateArea: { [weak self] in
+                self?.translationFlowController?.startTranslateArea()
+            },
+            onOpenSettings: { [weak self] in
+                self?.settingsPopoverController?.toggle()
+            },
+            onQuit: {
+                NSApp.terminate(nil)
+            }
+        )
+        if let menuBarController {
+            menuBarController.attachSettingsPopover(settingsPopoverController)
+        }
         registerGlobalHotKey()
     }
 
