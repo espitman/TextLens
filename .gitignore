@@ -21,3 +21,9 @@ dist/
 # Local environment
 .env
 .env.*
+
+# Android signing
+android/local.properties
+android/*.jks
+android/*.keystore
+android/keystores/

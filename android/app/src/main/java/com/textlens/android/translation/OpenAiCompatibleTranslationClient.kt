@@ -1,6 +1,7 @@
 package com.textlens.android.translation
 
 import com.textlens.android.data.AndroidSettings
+import com.textlens.android.data.TranslationProvider
 import com.textlens.android.data.displayName
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -71,9 +72,9 @@ class OpenAiCompatibleTranslationClient : TranslationClient {
                 if (!it.isSuccessful) {
                     Log.e(TAG, "Translation API returned ${it.code}: $body")
                     val message = when (it.code) {
-                        401 -> "کلید API ${settings.provider.displayName} رد شد. کلید را Sync یا دوباره وارد کن."
-                        429 -> "محدودیت ${settings.provider.displayName} پر شده. بعداً تست کن یا مدل را عوض کن."
-                        else -> "API ترجمه خطای ${it.code} داد: ${body.ifBlank { it.message }}"
+                        401 -> "${settings.provider.displayName} API key was rejected. Sync or re-enter the key."
+                        429 -> "${settings.provider.displayName} rate limit reached. Try again later or switch model."
+                        else -> "Translation API returned ${it.code}: ${body.ifBlank { it.message }}"
                     }
                     throw IOException(message)
                 }
@@ -86,8 +87,12 @@ class OpenAiCompatibleTranslationClient : TranslationClient {
 
                 TranslationOutput(
                     text = translatedText,
-                    costToman = decoded.usage?.let { usage ->
-                        max(1, ((usage.totalTokens ?: 0) * 0.35).roundToInt())
+                    costToman = if (settings.provider == TranslationProvider.Liara) {
+                        decoded.usage?.let { usage ->
+                            max(1, ((usage.totalTokens ?: 0) * 0.35).roundToInt())
+                        }
+                    } else {
+                        0
                     },
                     model = providerSettings.model,
                 )
@@ -109,7 +114,7 @@ class OpenAiCompatibleTranslationClient : TranslationClient {
         }
         val error = lastError ?: IOException("Unknown network failure")
         val detail = error.localizedMessage ?: error.javaClass.simpleName
-        throw IOException("ارتباط با API ترجمه برقرار نشد: $detail", error)
+        throw IOException("TextLens could not reach the translation API: $detail", error)
     }
 
     private companion object {

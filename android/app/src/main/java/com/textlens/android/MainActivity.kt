@@ -60,9 +60,6 @@ import com.textlens.android.data.modelOptions
 import com.textlens.android.core.AndroidPermissionController
 import com.textlens.android.core.AndroidPermissionState
 import com.textlens.android.core.FloatingBubbleService
-import com.textlens.android.core.MediaProjectionSession
-import com.textlens.android.core.ScreenCaptureGrant
-import com.textlens.android.core.screenCaptureGrantOrNull
 import com.textlens.android.ui.TextLensAndroidTheme
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.first
@@ -76,22 +73,7 @@ private val TextMuted = Color(0xA6F7F0DC)
 
 class MainActivity : ComponentActivity() {
     private lateinit var permissionController: AndroidPermissionController
-    private var screenCaptureGrant: ScreenCaptureGrant? = null
-    private var screenCaptureMessage = "Screen capture permission has not been requested yet."
     private var permissionState by mutableStateOf(AndroidPermissionState())
-
-    private val screenCaptureLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        screenCaptureGrant = screenCaptureGrantOrNull(result.resultCode, result.data)
-        MediaProjectionSession.update(result.resultCode, result.data)
-        screenCaptureMessage = if (screenCaptureGrant != null) {
-            "Screen capture permission is ready for this app session."
-        } else {
-            "Screen capture permission was denied or cancelled."
-        }
-        refreshPermissionState()
-    }
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -118,8 +100,8 @@ class MainActivity : ComponentActivity() {
                     onOpenOverlaySettings = {
                         startActivity(permissionController.overlaySettingsIntent())
                     },
-                    onRequestScreenCapture = {
-                        screenCaptureLauncher.launch(permissionController.screenCaptureIntent())
+                    onOpenAccessibilitySettings = {
+                        startActivity(permissionController.accessibilitySettingsIntent())
                     },
                     onRequestNotifications = {
                         permissionController.notificationPermission()?.let(notificationPermissionLauncher::launch)
@@ -159,10 +141,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshPermissionState() {
-        permissionState = permissionController.currentState(
-            screenCaptureGrant = screenCaptureGrant,
-            screenCaptureMessage = screenCaptureMessage,
-        )
+        permissionState = permissionController.currentState()
     }
 
     private fun importSettingsFromIntent(intent: Intent?) {
@@ -215,7 +194,7 @@ private fun TextLensSettingsApp(
     settings: AndroidSettings,
     permissionState: AndroidPermissionState,
     onOpenOverlaySettings: () -> Unit,
-    onRequestScreenCapture: () -> Unit,
+    onOpenAccessibilitySettings: () -> Unit,
     onRequestNotifications: () -> Unit,
     onStartBubble: () -> Unit,
     onStopBubble: () -> Unit,
@@ -284,7 +263,7 @@ private fun TextLensSettingsApp(
             PermissionPanel(
                 permissionState = permissionState,
                 onOpenOverlaySettings = onOpenOverlaySettings,
-                onRequestScreenCapture = onRequestScreenCapture,
+                onOpenAccessibilitySettings = onOpenAccessibilitySettings,
                 onRequestNotifications = onRequestNotifications,
                 isBubbleRunning = isBubbleRunning,
                 onToggleBubble = {
@@ -306,6 +285,22 @@ private fun TextLensSettingsApp(
                 savedMessage = savedMessage,
                 onProviderChange = {
                     selectedProvider = it
+                    onSave(
+                        AndroidSettings(
+                            provider = it,
+                            openRouter = ProviderSettings(
+                                apiKey = openRouterApiKey.trim(),
+                                baseUrl = openRouterBaseUrl.trim(),
+                                model = openRouterModel.trim(),
+                            ),
+                            liara = ProviderSettings(
+                                apiKey = liaraApiKey.trim(),
+                                baseUrl = liaraBaseUrl.trim(),
+                                model = liaraModel.trim(),
+                            ),
+                            targetLanguage = targetLanguage.trim().ifBlank { "Persian" },
+                        ),
+                    )
                     savedMessage = ""
                 },
                 onApiKeyChange = {
@@ -414,7 +409,7 @@ private fun FirstRunStatusCard(
 private fun PermissionPanel(
     permissionState: AndroidPermissionState,
     onOpenOverlaySettings: () -> Unit,
-    onRequestScreenCapture: () -> Unit,
+    onOpenAccessibilitySettings: () -> Unit,
     onRequestNotifications: () -> Unit,
     isBubbleRunning: Boolean,
     onToggleBubble: () -> Unit,
@@ -435,7 +430,7 @@ private fun PermissionPanel(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "TextLens needs overlay access for the floating bubble and screen capture access for selected-area OCR. Capture permission is kept only for the active app session.",
+            text = "TextLens uses Accessibility screenshots for selected-area OCR so Android does not show the screen recording timer.",
             color = TextMuted,
             fontSize = 13.sp,
             lineHeight = 20.sp,
@@ -449,11 +444,11 @@ private fun PermissionPanel(
             onAction = onOpenOverlaySettings,
         )
         PermissionRow(
-            title = "Screen capture",
-            description = permissionState.screenCaptureMessage,
-            granted = permissionState.screenCaptureGranted,
-            actionLabel = "Request",
-            onAction = onRequestScreenCapture,
+            title = "Accessibility",
+            description = "Primary capture path. Enable TextLens here to translate without Android's screen recording timer.",
+            granted = permissionState.accessibilityGranted,
+            actionLabel = "Open Settings",
+            onAction = onOpenAccessibilitySettings,
         )
         PermissionRow(
             title = "Notifications",
@@ -790,7 +785,7 @@ private fun TextLensAppPreview() {
             settings = AndroidSettings(),
             permissionState = AndroidPermissionState(),
             onOpenOverlaySettings = {},
-            onRequestScreenCapture = {},
+            onOpenAccessibilitySettings = {},
             onRequestNotifications = {},
             onStartBubble = {},
             onStopBubble = {},

@@ -5,6 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+import java.util.Properties
+
 android {
     namespace = "com.textlens.android"
     compileSdk = 35
@@ -28,11 +30,38 @@ android {
             enableV3Signing = false
             enableV4Signing = false
         }
+        create("release") {
+            val signingProperties = Properties()
+            val signingPropertiesFile = rootProject.file("local.properties")
+            if (signingPropertiesFile.exists()) {
+                signingPropertiesFile.inputStream().use(signingProperties::load)
+            }
+
+            val keystorePath = signingProperties.getProperty("TEXTLENS_KEYSTORE_PATH")
+                ?: System.getenv("TEXTLENS_KEYSTORE_PATH")
+            val keystorePassword = signingProperties.getProperty("TEXTLENS_KEYSTORE_PASSWORD")
+                ?: System.getenv("TEXTLENS_KEYSTORE_PASSWORD")
+            val keyAlias = signingProperties.getProperty("TEXTLENS_KEY_ALIAS")
+                ?: System.getenv("TEXTLENS_KEY_ALIAS")
+            val keyPassword = signingProperties.getProperty("TEXTLENS_KEY_PASSWORD")
+                ?: System.getenv("TEXTLENS_KEY_PASSWORD")
+
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = false
+            }
+        }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             isShrinkResources = false
         }

@@ -73,7 +73,6 @@ class FloatingBubbleService : Service() {
 
     override fun onDestroy() {
         activeJob?.cancel()
-        captureService.close()
         removeBubble()
         removeSelection()
         removePopup()
@@ -133,7 +132,7 @@ class FloatingBubbleService : Service() {
                     if (longPress) {
                         openSettings()
                     } else if (!moved) {
-                        startSelection()
+                        handleBubbleTap()
                     } else {
                         snapBubble(view, params)
                     }
@@ -142,6 +141,17 @@ class FloatingBubbleService : Service() {
                 else -> true
             }
         }
+    }
+
+    private fun handleBubbleTap() {
+        if (popupView != null) {
+            activeJob?.cancel()
+            activeJob = null
+            removePopup()
+            return
+        }
+
+        startSelection()
     }
 
     private fun snapBubble(view: View, params: WindowManager.LayoutParams) {
@@ -155,17 +165,20 @@ class FloatingBubbleService : Service() {
     }
 
     private fun startSelection() {
-        if (MediaProjectionSession.grant == null) {
-            showErrorPopup("Screen capture permission is required. Long press the bubble to open TextLens, then press Request in Permission Flow.")
+        if (!captureService.canCapture) {
+            showErrorPopup("Accessibility permission is required. Long press the bubble, open TextLens, then enable Accessibility in Permission Flow.")
             return
         }
+        activeJob?.cancel()
+        activeJob = null
+        removePopup()
         bubbleView?.visibility = View.GONE
         removeSelection()
         val overlay = SelectionOverlayView(this) { area ->
             removeSelection()
             bubbleView?.visibility = View.VISIBLE
             if (area == null) {
-                showErrorPopup("Selection was cancelled or too small.")
+                return@SelectionOverlayView
             } else {
                 lastArea = area
                 runTranslation(area)
@@ -185,7 +198,6 @@ class FloatingBubbleService : Service() {
         activeJob = scope.launch {
             var popup: TranslationPopupView? = null
             try {
-                startCaptureForeground()
                 val bitmap = captureService.capture(area)
                 popup = showLoadingPopup()
                 val recognizedText = try {
@@ -204,10 +216,6 @@ class FloatingBubbleService : Service() {
             } catch (error: Throwable) {
                 val visiblePopup = popup ?: showLoadingPopup()
                 visiblePopup.state = TranslationPopupView.State.Error(error.message ?: "TextLens could not translate the selected area.")
-            } finally {
-                if (!captureService.hasActiveProjection) {
-                    startBubbleForeground()
-                }
             }
         }
     }
@@ -318,15 +326,6 @@ class FloatingBubbleService : Service() {
             NOTIFICATION_ID,
             notification("Floating bubble is active"),
             foregroundType(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE),
-        )
-    }
-
-    private fun startCaptureForeground() {
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            notification("Capturing selected area"),
-            foregroundType(ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION),
         )
     }
 

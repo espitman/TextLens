@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.os.SystemClock
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -61,12 +62,6 @@ class SelectionOverlayView(
         isFakeBoldText = true
         typeface = persianTypeface(context)
     }
-    private val hintPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(210, 247, 240, 220)
-        textSize = 22f
-        textAlign = Paint.Align.CENTER
-        typeface = persianTypeface(context)
-    }
     private val selectionRect = RectF()
     private val confirmRect = RectF()
     private val cancelRect = RectF()
@@ -100,27 +95,20 @@ class SelectionOverlayView(
         canvas.drawRoundRect(resizeHandleRect, 12f, 12f, handlePaint)
 
         confirmRect.set(
-            selectionRect.right - 132f,
+            selectionRect.left,
+            selectionRect.bottom + 18f,
+            selectionRect.left + 132f,
+            selectionRect.bottom + 72f,
+        )
+        cancelRect.set(
+            selectionRect.right - 116f,
             selectionRect.bottom + 18f,
             selectionRect.right,
             selectionRect.bottom + 72f,
         )
-        cancelRect.set(
-            selectionRect.left,
-            selectionRect.bottom + 18f,
-            selectionRect.left + 116f,
-            selectionRect.bottom + 72f,
-        )
         keepActionButtonsOnScreen()
-        drawActionButton(canvas, confirmRect, "ترجمه")
-        drawActionButton(canvas, cancelRect, "لغو")
-
-        canvas.drawText(
-            "باکس را جابه‌جا کن یا از گوشه پایین راست تغییر اندازه بده",
-            width / 2f,
-            (selectionRect.top - 24f).coerceAtLeast(44f),
-            hintPaint,
-        )
+        drawActionButton(canvas, confirmRect, "Translate")
+        drawActionButton(canvas, cancelRect, "Cancel")
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -258,6 +246,18 @@ class TranslationPopupView(context: Context) : View(context) {
         color = Color.rgb(245, 200, 74)
         style = Paint.Style.FILL
     }
+    private val loaderTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(54, 245, 200, 74)
+        style = Paint.Style.STROKE
+        strokeWidth = 9f
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val loaderArcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(245, 200, 74)
+        style = Paint.Style.STROKE
+        strokeWidth = 9f
+        strokeCap = Paint.Cap.ROUND
+    }
     private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(247, 240, 220)
         textSize = 34f
@@ -297,7 +297,7 @@ class TranslationPopupView(context: Context) : View(context) {
         canvas.drawRoundRect(bounds.insetCopy(2f), 34f, 34f, borderPaint)
 
         canvas.drawText("TextLens", 32f, 54f, textPaint)
-        canvas.drawText("ترجمه", width - 34f, 54f, textPaint.apply { textAlign = Paint.Align.RIGHT })
+        canvas.drawText("Translation", width - 34f, 54f, textPaint.apply { textAlign = Paint.Align.RIGHT })
         textPaint.textAlign = Paint.Align.LEFT
         canvas.drawLine(28f, 82f, width - 28f, 82f, borderPaint.apply { alpha = 90 })
         borderPaint.alpha = 255
@@ -347,23 +347,27 @@ class TranslationPopupView(context: Context) : View(context) {
     }
 
     private fun drawLoading(canvas: Canvas) {
-        canvas.drawCircle(width / 2f, height / 2f, 34f, borderPaint)
-        canvas.drawCircle(width / 2f + 18f, height / 2f - 18f, 10f, goldPaint)
-        canvas.drawText("در حال خواندن و ترجمه...", width - 40f, height / 2f + 74f, mutedPaint.apply { textAlign = Paint.Align.RIGHT })
-        mutedPaint.textAlign = Paint.Align.LEFT
-        drawButton(canvas, closeRect.setAndReturn(width - 156f, height - 66f, width - 30f, height - 20f), "لغو")
+        val radius = 38f
+        val centerX = width / 2f
+        val centerY = height / 2f
+        val spinnerBounds = RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius)
+        val angle = ((SystemClock.uptimeMillis() / 5L) % 360L).toFloat()
+        canvas.drawArc(spinnerBounds, 0f, 360f, false, loaderTrackPaint)
+        canvas.drawArc(spinnerBounds, angle, 94f, false, loaderArcPaint)
+        postInvalidateDelayed(16L)
+        drawButton(canvas, closeRect.setAndReturn(width - 156f, height - 66f, width - 30f, height - 20f), "Cancel")
     }
 
     private fun drawResult(canvas: Canvas, result: State.Result) {
         val textArea = Rect(34, 108, width - 34, height - 104)
         val displayText = result.text.normalizedForPersianDisplay()
         val layout = StaticLayout.Builder.obtain(displayText, 0, displayText.length, textPaint.apply {
-            textSize = 24f
+            textSize = 48f
             textAlign = Paint.Align.LEFT
         }, textArea.width())
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setTextDirection(TextDirectionHeuristics.RTL)
-            .setLineSpacing(8f, 1f)
+            .setLineSpacing(14f, 1f)
             .setIncludePad(false)
             .build()
         resultContentHeight = layout.height.toFloat()
@@ -375,10 +379,14 @@ class TranslationPopupView(context: Context) : View(context) {
         canvas.restore()
         textPaint.textAlign = Paint.Align.LEFT
 
-        val cost = result.costToman?.let { "هزینه: $it تومان" } ?: "هزینه: نامشخص"
+        val cost = when (result.costToman) {
+            0 -> "Cost: Free"
+            null -> "Cost: Unknown"
+            else -> "Cost: ${result.costToman} toman"
+        }
         canvas.drawText(cost, 38f, height - 38f, mutedPaint)
-        drawButton(canvas, copyRect.setAndReturn(width - 292f, height - 72f, width - 164f, height - 22f), "کپی")
-        drawButton(canvas, closeRect.setAndReturn(width - 148f, height - 72f, width - 28f, height - 22f), "بستن")
+        drawButton(canvas, copyRect.setAndReturn(width - 292f, height - 72f, width - 164f, height - 22f), "Copy")
+        drawButton(canvas, closeRect.setAndReturn(width - 148f, height - 72f, width - 28f, height - 22f), "Close")
     }
 
     private fun resetMainTextPaint() {
@@ -392,7 +400,7 @@ class TranslationPopupView(context: Context) : View(context) {
         textPaint.color = Color.rgb(255, 95, 95)
         textPaint.textAlign = Paint.Align.CENTER
         canvas.drawText("!", width / 2f, 142f, textPaint.apply { textSize = 48f })
-        val safeMessage = message.ifBlank { "خطای نامشخص رخ داد." }
+        val safeMessage = message.ifBlank { "An unknown error occurred." }
         val contentWidth = (width - 72).coerceAtLeast(160)
         val layout = StaticLayout.Builder.obtain(safeMessage, 0, safeMessage.length, textPaint.apply { textSize = 22f }, contentWidth)
             .setAlignment(Layout.Alignment.ALIGN_CENTER)
@@ -407,7 +415,7 @@ class TranslationPopupView(context: Context) : View(context) {
         textPaint.textAlign = Paint.Align.LEFT
         drawButton(canvas, modelRect.setAndReturn(width - 420f, height - 72f, width - 300f, height - 22f), "Model")
         drawButton(canvas, retryRect.setAndReturn(width - 292f, height - 72f, width - 164f, height - 22f), "Retry")
-        drawButton(canvas, closeRect.setAndReturn(width - 148f, height - 72f, width - 28f, height - 22f), "بستن")
+        drawButton(canvas, closeRect.setAndReturn(width - 148f, height - 72f, width - 28f, height - 22f), "Close")
     }
 
     private fun drawButton(canvas: Canvas, rect: RectF, label: String) {
