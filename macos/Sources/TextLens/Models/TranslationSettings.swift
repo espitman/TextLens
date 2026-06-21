@@ -43,6 +43,7 @@ enum TranslationProvider: String, CaseIterable, Identifiable {
                 options: [
                     "openai/gpt-5-nano",
                     "openai/gpt-4.1-mini",
+                    "google/gemma-3-27b-it",
                     "google/gemini-2.0-flash-lite-001",
                 ]
             )

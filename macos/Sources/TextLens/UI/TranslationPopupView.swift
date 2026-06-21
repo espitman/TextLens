@@ -299,6 +299,9 @@ private struct RtlScrollTextView: NSViewRepresentable {
         )
         textView.layoutManager?.ensureLayout(for: textView.textContainer!)
         textView.sizeToFit()
+        textView.scrollRangeToVisible(NSRange(location: 0, length: 0))
+        scrollView.contentView.scroll(to: .zero)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 }
 
