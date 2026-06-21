@@ -8,6 +8,7 @@ The first implementation target is macOS. Android and other platforms are planne
 
 ```text
 TextLens/
+  android/       Android app implementation
   macos/         macOS app implementation
   docs/          product specs and implementation plans
   site/          GitHub Pages landing page
@@ -36,6 +37,33 @@ Build, install, and run it from the repository root with:
 ```
 
 The script creates `/Applications/TextLens.app` and opens it. This gives macOS a stable app identity for Screen Recording permission.
+
+## Android App
+
+The Android app is scaffolded in:
+
+```text
+android
+```
+
+Build it with:
+
+```sh
+cd android
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :app:assembleDebug
+```
+
+Build, install, and run it on an emulator from the repository root with:
+
+```sh
+./scripts/android_run.sh
+```
+
+Build an unsigned release APK with:
+
+```sh
+./scripts/android_release.sh
+```
 
 ## Release Build
 

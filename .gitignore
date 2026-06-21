@@ -12,6 +12,9 @@ build/
 .build/
 .swiftpm/
 
+# Gradle
+.gradle/
+
 # Release artifacts
 dist/
 
