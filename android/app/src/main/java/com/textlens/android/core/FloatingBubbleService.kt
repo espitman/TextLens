@@ -128,13 +128,17 @@ class FloatingBubbleService : Service() {
                 }
                 MotionEvent.ACTION_UP -> {
                     val moved = kotlin.math.abs(event.rawX - downRawX) > 12 || kotlin.math.abs(event.rawY - downRawY) > 12
-                    val longPress = System.currentTimeMillis() - downTime > 520
+                    val longPress = !moved && System.currentTimeMillis() - downTime > 520
                     if (longPress) {
                         openSettings()
                     } else if (!moved) {
                         handleBubbleTap()
                     } else {
-                        snapBubble(view, params)
+                        saveBubblePosition(params)
+                        startSelection(
+                            initialCenterX = params.x + view.width / 2f,
+                            initialCenterY = params.y + view.height / 2f,
+                        )
                     }
                     true
                 }
@@ -157,14 +161,18 @@ class FloatingBubbleService : Service() {
     private fun snapBubble(view: View, params: WindowManager.LayoutParams) {
         val width = resources.displayMetrics.widthPixels
         params.x = if (params.x < width / 2) dp(12) else width - dp(58)
+        saveBubblePosition(params)
+        windowManager.updateViewLayout(view, params)
+    }
+
+    private fun saveBubblePosition(params: WindowManager.LayoutParams) {
         preferences().edit()
             .putInt("bubble_x", params.x)
             .putInt("bubble_y", params.y)
             .apply()
-        windowManager.updateViewLayout(view, params)
     }
 
-    private fun startSelection() {
+    private fun startSelection(initialCenterX: Float? = null, initialCenterY: Float? = null) {
         if (!captureService.canCapture) {
             showErrorPopup("Accessibility permission is required. Long press the bubble, open TextLens, then enable Accessibility in Permission Flow.")
             return
@@ -174,7 +182,11 @@ class FloatingBubbleService : Service() {
         removePopup()
         bubbleView?.visibility = View.GONE
         removeSelection()
-        val overlay = SelectionOverlayView(this) { area ->
+        val overlay = SelectionOverlayView(
+            context = this,
+            initialCenterX = initialCenterX,
+            initialCenterY = initialCenterY,
+        ) { area ->
             removeSelection()
             bubbleView?.visibility = View.VISIBLE
             if (area == null) {

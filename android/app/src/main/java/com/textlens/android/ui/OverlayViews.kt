@@ -21,6 +21,8 @@ import kotlin.math.min
 
 class SelectionOverlayView(
     context: Context,
+    private val initialCenterX: Float? = null,
+    private val initialCenterY: Float? = null,
     private val onComplete: (ScreenArea?) -> Unit,
 ) : View(context) {
     private enum class DragMode {
@@ -161,10 +163,13 @@ class SelectionOverlayView(
     private fun ensureInitialRect() {
         if (!selectionRect.isEmpty || width == 0 || height == 0) return
         val rectWidth = width * 0.72f
-        val rectHeight = height * 0.28f
-        val left = (width - rectWidth) / 2f
-        val top = (height - rectHeight) / 2.8f
+        val rectHeight = height * 0.24f
+        val centerX = initialCenterX ?: (width / 2f)
+        val centerY = initialCenterY ?: (height / 2.8f + rectHeight / 2f)
+        val left = centerX - rectWidth / 2f
+        val top = centerY - rectHeight / 2f
         selectionRect.set(left, top, left + rectWidth, top + rectHeight)
+        clampSelection()
     }
 
     private fun moveSelection(dx: Float, dy: Float) {
