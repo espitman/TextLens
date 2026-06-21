@@ -8,15 +8,27 @@ final class TranslationPopupWindow: NSPanel {
     private var translatedTextForCopy = ""
     private let onCancel: () -> Void
     private let onOpenScreenRecordingSettings: () -> Void
+    private let retryOptions: () -> [TranslationRetryOption]
+    private let selectedRetryModel: () -> String?
+    private let onSelectRetryModel: (String) -> Void
+    private let onRetry: () -> Void
     private let selectionRect: CGRect
 
     init(
         near selectionRect: CGRect,
         onCancel: @escaping () -> Void,
-        onOpenScreenRecordingSettings: @escaping () -> Void
+        onOpenScreenRecordingSettings: @escaping () -> Void,
+        retryOptions: @escaping () -> [TranslationRetryOption],
+        selectedRetryModel: @escaping () -> String?,
+        onSelectRetryModel: @escaping (String) -> Void,
+        onRetry: @escaping () -> Void
     ) {
         self.onCancel = onCancel
         self.onOpenScreenRecordingSettings = onOpenScreenRecordingSettings
+        self.retryOptions = retryOptions
+        self.selectedRetryModel = selectedRetryModel
+        self.onSelectRetryModel = onSelectRetryModel
+        self.onRetry = onRetry
         self.selectionRect = selectionRect
 
         super.init(
@@ -29,24 +41,7 @@ final class TranslationPopupWindow: NSPanel {
             defer: false
         )
 
-        contentViewController = NSHostingController(
-            rootView: TranslationPopupView(
-                viewModel: viewModel,
-                popupHeight: TranslationPopupView.loadingHeight,
-                onCopy: { [weak self] in
-                    self?.copyTranslation()
-                },
-                onCancel: { [weak self] in
-                    self?.cancel()
-                },
-                onClose: { [weak self] in
-                    self?.close()
-                },
-                onFailureAction: { [weak self] action in
-                    self?.handleFailureAction(action)
-                }
-            )
-        )
+        contentViewController = makeHostingController(popupHeight: TranslationPopupView.loadingHeight)
 
         isReleasedWhenClosed = false
         backgroundColor = .clear
@@ -136,13 +131,11 @@ final class TranslationPopupWindow: NSPanel {
         }
     }
 
-    private func updatePopupHeight(for text: String) {
-        let targetHeight = Self.height(for: text)
-        setContentSize(CGSize(width: TranslationPopupView.popupWidth, height: targetHeight))
-        contentViewController = NSHostingController(
+    private func makeHostingController(popupHeight: CGFloat) -> NSHostingController<TranslationPopupView> {
+        NSHostingController(
             rootView: TranslationPopupView(
                 viewModel: viewModel,
-                popupHeight: targetHeight,
+                popupHeight: popupHeight,
                 onCopy: { [weak self] in
                     self?.copyTranslation()
                 },
@@ -154,9 +147,28 @@ final class TranslationPopupWindow: NSPanel {
                 },
                 onFailureAction: { [weak self] action in
                     self?.handleFailureAction(action)
+                },
+                retryOptions: retryOptions(),
+                selectedRetryModel: selectedRetryModel(),
+                onSelectRetryModel: { [weak self] model in
+                    self?.onSelectRetryModel(model)
+                    self?.refreshRootView()
+                },
+                onRetry: { [weak self] in
+                    self?.onRetry()
                 }
             )
         )
+    }
+
+    private func refreshRootView() {
+        contentViewController = makeHostingController(popupHeight: frame.height)
+    }
+
+    private func updatePopupHeight(for text: String) {
+        let targetHeight = Self.height(for: text)
+        setContentSize(CGSize(width: TranslationPopupView.popupWidth, height: targetHeight))
+        contentViewController = makeHostingController(popupHeight: targetHeight)
         setFrameOrigin(Self.origin(for: CGSize(width: TranslationPopupView.popupWidth, height: targetHeight), near: selectionRect))
     }
 

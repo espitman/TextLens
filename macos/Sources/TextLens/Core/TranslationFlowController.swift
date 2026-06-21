@@ -5,6 +5,7 @@ final class TranslationFlowController {
     private var selectionOverlayWindow: SelectionOverlayWindow?
     private var translationPopupWindow: TranslationPopupWindow?
     private var currentTask: Task<Void, Never>?
+    private var lastRecognizedText: String?
     private let settingsStore: SettingsStore
     private let historyStore: TranslationHistoryStore
     private let openSettings: () -> Void
@@ -78,6 +79,9 @@ final class TranslationFlowController {
 
             let image = try screenshotService.capture(rect: selection.rect, displayID: selection.displayID)
             let recognizedText = try await ocrService.recognizeText(from: image)
+            await MainActor.run {
+                lastRecognizedText = recognizedText
+            }
             let settings = await MainActor.run {
                 settingsStore.settings
             }
@@ -122,6 +126,77 @@ final class TranslationFlowController {
             }
             if !permissionService.requestScreenRecordingPermission() {
                 permissionService.openScreenRecordingSettings()
+            }
+        } retryOptions: { [weak self] in
+            self?.retryOptions() ?? []
+        } selectedRetryModel: { [weak self] in
+            self?.settingsStore.settings.model
+        } onSelectRetryModel: { [weak self] model in
+            self?.selectRetryModel(model)
+        } onRetry: { [weak self] in
+            self?.retryLastTranslation()
+        }
+    }
+
+    @MainActor
+    private func retryOptions() -> [TranslationRetryOption] {
+        settingsStore.settings.provider.modelCatalog.options.map {
+            TranslationRetryOption(model: $0)
+        }
+    }
+
+    @MainActor
+    private func selectRetryModel(_ model: String) {
+        let currentSettings = settingsStore.settings
+        settingsStore.save(
+            TranslationSettings(
+                provider: currentSettings.provider,
+                apiKey: currentSettings.apiKey,
+                baseURL: currentSettings.baseURL,
+                model: model,
+                targetLanguage: currentSettings.targetLanguage
+            )
+        )
+    }
+
+    @MainActor
+    private func retryLastTranslation() {
+        guard let text = lastRecognizedText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else {
+            translationPopupWindow?.showError(TextLensError.noTextFound)
+            return
+        }
+
+        currentTask?.cancel()
+        translationPopupWindow?.viewModel.state = .loading
+        isRunning = true
+        currentTask = Task { [weak self] in
+            await self?.translateRecognizedText(text)
+        }
+    }
+
+    private func translateRecognizedText(_ recognizedText: String) async {
+        do {
+            let settings = await MainActor.run {
+                settingsStore.settings
+            }
+            let translationResult = try await translationService.translate(recognizedText, settings: settings)
+            await MainActor.run {
+                historyStore.add(translationResult)
+                translationPopupWindow?.showResult(translationResult)
+                currentTask = nil
+                isRunning = false
+            }
+        } catch is CancellationError {
+            await MainActor.run {
+                currentTask = nil
+                isRunning = false
+            }
+        } catch {
+            await MainActor.run {
+                translationPopupWindow?.showError(error)
+                currentTask = nil
+                isRunning = false
             }
         }
     }

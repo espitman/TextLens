@@ -8,6 +8,7 @@ APP_NAME="TextLens"
 APP_BUNDLE="/Applications/$APP_NAME.app"
 TEMP_APP_BUNDLE="/tmp/$APP_NAME.app"
 BUNDLE_IDENTIFIER="com.textlens.app"
+BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
 
 echo "Building $APP_NAME..."
 cd "$MACOS_DIR"
@@ -24,6 +25,10 @@ if [ -d "$BUILD_DIR/TextLens_TextLens.bundle" ]; then
   cp -R "$BUILD_DIR/TextLens_TextLens.bundle" "$TEMP_APP_BUNDLE/Contents/Resources/"
 fi
 
+if [ -f "$MACOS_DIR/Sources/TextLens/Resources/AppIcon.icns" ]; then
+  cp "$MACOS_DIR/Sources/TextLens/Resources/AppIcon.icns" "$TEMP_APP_BUNDLE/Contents/Resources/AppIcon.icns"
+fi
+
 cat > "$TEMP_APP_BUNDLE/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -37,12 +42,16 @@ cat > "$TEMP_APP_BUNDLE/Contents/Info.plist" <<PLIST
     <string>$APP_NAME</string>
     <key>CFBundleDisplayName</key>
     <string>$APP_NAME</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>0.1.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>$BUILD_NUMBER</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -56,6 +65,12 @@ PLIST
 echo "Installing $APP_BUNDLE..."
 rm -rf "$APP_BUNDLE"
 cp -R "$TEMP_APP_BUNDLE" "$APP_BUNDLE"
+touch "$APP_BUNDLE"
+
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [ -x "$LSREGISTER" ]; then
+  "$LSREGISTER" -f "$APP_BUNDLE" >/dev/null 2>&1 || true
+fi
 
 echo "Restarting $APP_NAME..."
 pkill -x "$APP_NAME" 2>/dev/null || true

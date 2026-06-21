@@ -1,5 +1,12 @@
 import SwiftUI
 
+private enum GoldTheme {
+    static let gold = Color(red: 1.0, green: 0.78, blue: 0.25)
+    static let goldDeep = Color(red: 0.72, green: 0.48, blue: 0.10)
+    static let panel = Color(red: 0.08, green: 0.065, blue: 0.035)
+    static let field = Color(red: 0.035, green: 0.03, blue: 0.02)
+}
+
 struct SettingsView: View {
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var historyStore: TranslationHistoryStore
@@ -65,11 +72,21 @@ struct SettingsView: View {
         .frame(width: 420)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.black.opacity(0.94))
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.97),
+                            GoldTheme.panel.opacity(0.96),
+                            Color.black.opacity(0.97),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(.white.opacity(0.14), lineWidth: 1)
+                .stroke(GoldTheme.gold.opacity(0.22), lineWidth: 1)
         )
         .preferredColorScheme(.dark)
         .onAppear {
@@ -135,6 +152,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            .tint(GoldTheme.goldDeep)
         }
         .padding(16)
         .background(
@@ -142,7 +160,7 @@ struct SettingsView: View {
                 .fill(.white.opacity(0.055))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(.blue.opacity(0.34), lineWidth: 1.2)
+                        .stroke(GoldTheme.gold.opacity(0.42), lineWidth: 1.2)
                 )
         )
     }
@@ -156,7 +174,7 @@ struct SettingsView: View {
         } label: {
             SettingsCardRow(
                 icon: "text.viewfinder",
-                iconColor: .blue,
+                iconColor: GoldTheme.gold,
                 title: "Translate Area",
                 subtitle: "Select an area and translate",
                 trailing: "⌘⇧0"
@@ -271,7 +289,11 @@ struct SettingsView: View {
                         .frame(height: 36)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(provider == candidate ? Color.blue.opacity(0.92) : Color.white.opacity(0.06))
+                                .fill(provider == candidate ? GoldTheme.goldDeep.opacity(0.96) : Color.white.opacity(0.06))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(provider == candidate ? GoldTheme.gold.opacity(0.34) : .clear, lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -283,7 +305,7 @@ struct SettingsView: View {
                 .fill(.black.opacity(0.22))
                 .overlay(
                     RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .stroke(.white.opacity(0.08), lineWidth: 1)
+                        .stroke(GoldTheme.gold.opacity(0.12), lineWidth: 1)
                 )
         )
     }
@@ -311,7 +333,7 @@ struct SettingsView: View {
             .fill(.white.opacity(0.055))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
+                    .stroke(GoldTheme.gold.opacity(0.12), lineWidth: 1)
             )
     }
 
@@ -401,7 +423,7 @@ private struct FieldRow<Content: View>: View {
                 .frame(height: 34)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.black.opacity(0.18))
+                        .fill(GoldTheme.field.opacity(0.82))
                 )
         }
     }
@@ -433,9 +455,9 @@ private struct EditableModelPicker: View {
                     Button {
                         confirmCustomModel()
                     } label: {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.green)
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(GoldTheme.gold)
                             .frame(width: 26, height: 24)
                     }
                     .buttonStyle(.plain)
@@ -445,7 +467,7 @@ private struct EditableModelPicker: View {
                 .frame(height: 34)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.black.opacity(0.18))
+                        .fill(GoldTheme.field.opacity(0.82))
                 )
             } else {
                 Button {
@@ -476,7 +498,7 @@ private struct EditableModelPicker: View {
                 .buttonStyle(.plain)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.black.opacity(0.18))
+                        .fill(GoldTheme.field.opacity(0.82))
                 )
             }
 
@@ -501,7 +523,7 @@ private struct EditableModelPicker: View {
                                 if !isCustom && option == text {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(GoldTheme.gold)
                                 }
                             }
                             .padding(.horizontal, 12)
@@ -533,7 +555,7 @@ private struct EditableModelPicker: View {
                             if isCustom {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(GoldTheme.gold)
                             }
                         }
                         .padding(.horizontal, 12)
@@ -546,12 +568,12 @@ private struct EditableModelPicker: View {
                 .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
+                        .fill(Color(red: 0.09, green: 0.075, blue: 0.04))
                         .shadow(color: .black.opacity(0.34), radius: 18, y: 10)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(.white.opacity(0.08), lineWidth: 1)
+                        .stroke(GoldTheme.gold.opacity(0.14), lineWidth: 1)
                 )
             }
         }
@@ -614,7 +636,7 @@ private struct SettingsCardRow: View {
                 .fill(.white.opacity(0.055))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(.white.opacity(0.08), lineWidth: 1)
+                        .stroke(GoldTheme.gold.opacity(0.12), lineWidth: 1)
                 )
         )
     }
@@ -643,7 +665,7 @@ private struct HistoryCard: View {
                 Spacer()
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.blue.opacity(0.9))
+                    .foregroundStyle(GoldTheme.gold.opacity(0.9))
             }
         }
         .padding(12)
@@ -653,7 +675,7 @@ private struct HistoryCard: View {
                 .fill(.white.opacity(0.055))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.white.opacity(0.08), lineWidth: 1)
+                        .stroke(GoldTheme.gold.opacity(0.12), lineWidth: 1)
                 )
         )
     }
@@ -669,22 +691,38 @@ private struct AppIcon: View {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.blue, Color.cyan.opacity(0.78)],
+                        colors: [
+                            Color.black,
+                            Color(red: 0.16, green: 0.12, blue: 0.05),
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .frame(width: 58, height: 58)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .stroke(Color(red: 0.95, green: 0.70, blue: 0.20).opacity(0.42), lineWidth: 1)
+                )
 
             Text("T")
                 .font(.system(size: 38, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 1.0, green: 0.86, blue: 0.35),
+                            Color(red: 0.72, green: 0.48, blue: 0.10),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .offset(x: -9, y: -7)
 
             Circle()
-                .fill(.white)
+                .fill(Color.black.opacity(0.92))
                 .frame(width: 24, height: 24)
-                .overlay(Circle().stroke(Color.blue.opacity(0.8), lineWidth: 4))
+                .overlay(Circle().stroke(Color(red: 1.0, green: 0.78, blue: 0.25), lineWidth: 4))
                 .offset(x: 5, y: 5)
         }
         .frame(width: 66, height: 66)

@@ -16,6 +16,11 @@ final class TranslationPopupViewModel: ObservableObject {
     @Published var state: State = .loading
 }
 
+struct TranslationRetryOption: Equatable, Identifiable {
+    var id: String { model }
+    var model: String
+}
+
 struct TranslationPopupView: View {
     static let popupWidth: CGFloat = 760
     static let maxPopupHeight: CGFloat = 520
@@ -27,6 +32,10 @@ struct TranslationPopupView: View {
     let onCancel: () -> Void
     let onClose: () -> Void
     let onFailureAction: (TranslationPopupViewModel.FailureAction) -> Void
+    let retryOptions: [TranslationRetryOption]
+    let selectedRetryModel: String?
+    let onSelectRetryModel: (String) -> Void
+    let onRetry: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -144,53 +153,44 @@ struct TranslationPopupView: View {
     private var footerActions: some View {
         switch viewModel.state {
         case .loading:
-            Button {
+            PopupFooterButton(title: "لغو", systemImage: "xmark", style: .secondary) {
                 onCancel()
-            } label: {
-                Label("لغو", systemImage: "xmark")
-                    .font(.custom("Vazirmatn", size: 13).weight(.medium))
             }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
                 .keyboardShortcut(.cancelAction)
 
         case .result:
-            Button {
+            PopupFooterButton(title: "کپی", systemImage: "doc.on.doc", style: .secondary) {
                 onCopy()
-            } label: {
-                Label("کپی", systemImage: "doc.on.doc")
-                    .font(.custom("Vazirmatn", size: 13).weight(.medium))
             }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
 
-            Button {
+            PopupFooterButton(title: "بستن", systemImage: "xmark", style: .primary) {
                 onClose()
-            } label: {
-                Label("بستن", systemImage: "xmark")
-                    .font(.custom("Vazirmatn", size: 13).weight(.medium))
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.regular)
             .keyboardShortcut(.cancelAction)
 
         case .failed(_, let action):
-            if let action {
-                Button {
-                    onFailureAction(action)
-                } label: {
-                    Label("Open Screen Recording Settings", systemImage: "gear")
-                        .font(.system(size: 13, weight: .semibold))
+            if !retryOptions.isEmpty {
+                RetryModelPicker(
+                    options: retryOptions,
+                    selectedModel: selectedRetryModel,
+                    onSelect: onSelectRetryModel
+                )
+
+                PopupFooterButton(title: "Retry", systemImage: "arrow.clockwise", style: .gold) {
+                    onRetry()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
             }
 
-            Button("بستن", action: onClose)
-                .font(.custom("Vazirmatn", size: 13).weight(.medium))
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .keyboardShortcut(.cancelAction)
+            if let action {
+                PopupFooterButton(title: "Settings", systemImage: "gearshape", style: .danger) {
+                    onFailureAction(action)
+                }
+            }
+
+            PopupFooterButton(title: "بستن", systemImage: "xmark", style: .primary) {
+                onClose()
+            }
+            .keyboardShortcut(.cancelAction)
         }
     }
 
@@ -201,8 +201,8 @@ struct TranslationPopupView: View {
                 LinearGradient(
                     colors: [
                         Color.white.opacity(0.72),
-                        Color(red: 0.95, green: 0.97, blue: 1.0).opacity(0.64),
-                        Color(red: 1.0, green: 0.96, blue: 0.92).opacity(0.34),
+                        Color(red: 1.0, green: 0.96, blue: 0.84).opacity(0.60),
+                        Color(red: 0.98, green: 0.86, blue: 0.48).opacity(0.22),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -235,6 +235,138 @@ struct TranslationPopupView: View {
         }
     }
 
+}
+
+private struct RetryModelPicker: View {
+    let options: [TranslationRetryOption]
+    let selectedModel: String?
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    onSelect(option.model)
+                } label: {
+                    if option.model == selectedModel {
+                        Label(option.model, systemImage: "checkmark")
+                    } else {
+                        Text(option.model)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(shortModelName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(Color.black.opacity(0.78))
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(Color.white.opacity(0.58))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .frame(maxWidth: 190)
+    }
+
+    private var shortModelName: String {
+        selectedModel ?? options.first?.model ?? "Model"
+    }
+}
+
+private struct PopupFooterButton: View {
+    enum Style {
+        case primary
+        case secondary
+        case gold
+        case danger
+    }
+
+    let title: String
+    let systemImage: String
+    let style: Style
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(title)
+                    .font(textFont)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(backgroundColor)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var textFont: Font {
+        if title.range(of: #"[\u{0600}-\u{06FF}]"#, options: .regularExpression) != nil {
+            return .custom("Vazirmatn", size: 13).weight(.medium)
+        }
+        return .system(size: 13, weight: .semibold)
+    }
+
+    private var foregroundColor: Color {
+        switch style {
+        case .primary:
+            Color.white
+        case .secondary:
+            Color.black.opacity(0.78)
+        case .gold:
+            Color.black.opacity(0.86)
+        case .danger:
+            Color(red: 0.74, green: 0.12, blue: 0.12)
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch style {
+        case .primary:
+            Color.black.opacity(0.88)
+        case .secondary:
+            Color.white.opacity(0.58)
+        case .gold:
+            Color(red: 1.0, green: 0.78, blue: 0.25).opacity(0.86)
+        case .danger:
+            Color(red: 1.0, green: 0.24, blue: 0.24).opacity(0.11)
+        }
+    }
+
+    private var borderColor: Color {
+        switch style {
+        case .primary:
+            Color(red: 1.0, green: 0.78, blue: 0.25).opacity(0.38)
+        case .secondary:
+            Color.black.opacity(0.08)
+        case .gold:
+            Color(red: 0.72, green: 0.48, blue: 0.10).opacity(0.22)
+        case .danger:
+            Color(red: 1.0, green: 0.24, blue: 0.24).opacity(0.24)
+        }
+    }
 }
 
 private struct RtlScrollTextView: NSViewRepresentable {
@@ -314,7 +446,7 @@ private struct LoadingGraphic: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color.blue.opacity(0.12), Color.clear],
+                        colors: [Color(red: 1.0, green: 0.78, blue: 0.25).opacity(0.14), Color.clear],
                         center: .center,
                         startRadius: 8,
                         endRadius: 96
@@ -332,10 +464,10 @@ private struct LoadingGraphic: View {
                 .stroke(
                     AngularGradient(
                         colors: [
-                            Color.blue.opacity(0.12),
-                            Color.blue.opacity(0.95),
-                            Color.cyan.opacity(0.76),
-                            Color.blue.opacity(0.12),
+                            Color(red: 1.0, green: 0.78, blue: 0.25).opacity(0.12),
+                            Color(red: 1.0, green: 0.78, blue: 0.25).opacity(0.95),
+                            Color(red: 0.72, green: 0.48, blue: 0.10).opacity(0.76),
+                            Color(red: 1.0, green: 0.78, blue: 0.25).opacity(0.12),
                         ],
                         center: .center
                     ),
@@ -350,7 +482,7 @@ private struct LoadingGraphic: View {
                 .overlay(
                     Image(systemName: "text.viewfinder")
                         .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(Color.blue.opacity(0.9))
+                        .foregroundStyle(Color(red: 0.72, green: 0.48, blue: 0.10).opacity(0.95))
                 )
                 .shadow(color: .black.opacity(0.08), radius: 14, y: 6)
         }
@@ -372,24 +504,31 @@ private struct AppMark: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.blue.opacity(0.92), Color.cyan.opacity(0.86)],
+                        colors: [
+                            Color.black,
+                            Color(red: 0.16, green: 0.12, blue: 0.05),
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .frame(width: 36, height: 36)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color(red: 0.95, green: 0.70, blue: 0.20).opacity(0.42), lineWidth: 1)
+                )
 
             Text("T")
                 .font(.system(size: 24, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(red: 1.0, green: 0.82, blue: 0.28))
                 .offset(x: -5, y: -4)
 
             Circle()
-                .fill(.white)
+                .fill(Color.black.opacity(0.92))
                 .frame(width: 16, height: 16)
                 .overlay(
                     Circle()
-                        .stroke(Color.blue.opacity(0.8), lineWidth: 3)
+                        .stroke(Color(red: 1.0, green: 0.78, blue: 0.25), lineWidth: 3)
                 )
                 .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                 .offset(x: 3, y: 3)
@@ -444,6 +583,13 @@ private struct CostBadge: View {
         onCopy: {},
         onCancel: {},
         onClose: {},
-        onFailureAction: { _ in }
+        onFailureAction: { _ in },
+        retryOptions: [
+            TranslationRetryOption(model: "google/gemma-4-31b-it:free"),
+            TranslationRetryOption(model: "openai/gpt-5-nano"),
+        ],
+        selectedRetryModel: "google/gemma-4-31b-it:free",
+        onSelectRetryModel: { _ in },
+        onRetry: {}
     )
 }
