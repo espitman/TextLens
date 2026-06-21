@@ -64,4 +64,5 @@ It is deployed by `.github/workflows/pages.yml`.
 ## Documentation
 
 - [Implementation spec](docs/TextLens_Codex_Spec.md)
-- [MVP TODO](docs/TODO.md)
+- [macOS MVP TODO](docs/macos_TODO.md)
+- [Android TODO](docs/ANDROID_TODO.md)

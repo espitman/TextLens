@@ -1,6 +1,6 @@
-# TextLens MVP TODO
+# TextLens macOS MVP TODO
 
-This document breaks the TextLens MVP into implementation phases with tasks and subtasks.
+This document breaks the TextLens macOS MVP into implementation phases with tasks and subtasks.
 
 ## Phase 0: Project Setup
 
