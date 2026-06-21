@@ -7,10 +7,16 @@ final class TranslationPopupWindow: NSPanel {
 
     private var translatedTextForCopy = ""
     private let onCancel: () -> Void
+    private let onOpenScreenRecordingSettings: () -> Void
     private let selectionRect: CGRect
 
-    init(near selectionRect: CGRect, onCancel: @escaping () -> Void) {
+    init(
+        near selectionRect: CGRect,
+        onCancel: @escaping () -> Void,
+        onOpenScreenRecordingSettings: @escaping () -> Void
+    ) {
         self.onCancel = onCancel
+        self.onOpenScreenRecordingSettings = onOpenScreenRecordingSettings
         self.selectionRect = selectionRect
 
         super.init(
@@ -35,6 +41,9 @@ final class TranslationPopupWindow: NSPanel {
                 },
                 onClose: { [weak self] in
                     self?.close()
+                },
+                onFailureAction: { [weak self] action in
+                    self?.handleFailureAction(action)
                 }
             )
         )
@@ -43,6 +52,7 @@ final class TranslationPopupWindow: NSPanel {
         backgroundColor = .clear
         isOpaque = false
         hasShadow = false
+        isMovableByWindowBackground = true
         setContentSize(CGSize(width: TranslationPopupView.popupWidth, height: TranslationPopupView.loadingHeight))
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
@@ -65,6 +75,10 @@ final class TranslationPopupWindow: NSPanel {
         }
     }
 
+    override func mouseDown(with event: NSEvent) {
+        performDrag(with: event)
+    }
+
     override func resignKey() {
         super.resignKey()
         if case .loading = viewModel.state {
@@ -83,9 +97,22 @@ final class TranslationPopupWindow: NSPanel {
         viewModel.state = .result(text: result.translatedText, costToman: result.costToman)
     }
 
+    func showHistoryItem(_ item: TranslationHistoryItem) {
+        translatedTextForCopy = item.translatedText
+        updatePopupHeight(for: item.translatedText)
+        viewModel.state = .result(text: item.translatedText, costToman: item.costToman)
+    }
+
     func showError(_ error: Error) {
         translatedTextForCopy = ""
-        viewModel.state = .failed(error.localizedDescription)
+        if case TextLensError.screenRecordingPermissionMissing = error {
+            viewModel.state = .failed(
+                message: error.localizedDescription,
+                action: .openScreenRecordingSettings
+            )
+        } else {
+            viewModel.state = .failed(message: error.localizedDescription, action: nil)
+        }
     }
 
     private func copyTranslation() {
@@ -100,6 +127,13 @@ final class TranslationPopupWindow: NSPanel {
     private func cancel() {
         onCancel()
         close()
+    }
+
+    private func handleFailureAction(_ action: TranslationPopupViewModel.FailureAction) {
+        switch action {
+        case .openScreenRecordingSettings:
+            onOpenScreenRecordingSettings()
+        }
     }
 
     private func updatePopupHeight(for text: String) {
@@ -117,6 +151,9 @@ final class TranslationPopupWindow: NSPanel {
                 },
                 onClose: { [weak self] in
                     self?.close()
+                },
+                onFailureAction: { [weak self] action in
+                    self?.handleFailureAction(action)
                 }
             )
         )
@@ -125,9 +162,9 @@ final class TranslationPopupWindow: NSPanel {
 
     private static func height(for text: String) -> CGFloat {
         let explicitLines = CGFloat(max(1, text.split(separator: "\n", omittingEmptySubsequences: false).count))
-        let estimatedWrappedLines = CGFloat(max(1, Int(ceil(Double(text.count) / 92.0))))
+        let estimatedWrappedLines = CGFloat(max(1, Int(ceil(Double(text.count) / 72.0))))
         let lines = max(explicitLines, estimatedWrappedLines)
-        let estimatedHeight = 210 + (lines * 30)
+        let estimatedHeight = 168 + (lines * 25)
         return min(TranslationPopupView.maxPopupHeight, max(TranslationPopupView.loadingHeight, estimatedHeight))
     }
 

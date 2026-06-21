@@ -23,14 +23,17 @@ final class TranslationService: TranslationServiceProtocol {
         var request = URLRequest(url: chatCompletionsURL(from: settings.baseURL))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(settings.apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(authorizationHeaderValue(for: settings), forHTTPHeaderField: "Authorization")
         if settings.provider == .openRouter {
             request.setValue("TextLens", forHTTPHeaderField: "X-OpenRouter-Title")
         }
-        request.timeoutInterval = 60
+        request.timeoutInterval = 180
+        let maxOutputTokens = maxOutputTokens(for: trimmedText, provider: settings.provider)
         request.httpBody = try JSONEncoder().encode(
             ChatCompletionRequest(
                 model: settings.model,
+                maxTokens: maxOutputTokens,
+                maxCompletionTokens: settings.provider == .openRouter ? maxOutputTokens : nil,
                 temperature: 0.2,
                 messages: [
                     .init(role: "system", content: systemPrompt(targetLanguage: settings.targetLanguage)),
@@ -39,25 +42,29 @@ final class TranslationService: TranslationServiceProtocol {
             )
         )
 
-        let (data, response): (Data, URLResponse)
+        let data: Data
+        let statusCode: Int
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, statusCode) = try await perform(request)
         } catch {
-            throw TextLensError.translationNetworkFailed
+            throw TextLensError.translationNetworkFailed(networkErrorMessage(from: error))
         }
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw TextLensError.translationMalformedResponse
-        }
-
-        guard (200..<300).contains(httpResponse.statusCode) else {
+        guard (200..<300).contains(statusCode) else {
             let apiMessage = decodeAPIError(from: data)
-            throw TextLensError.translationHTTPError(statusCode: httpResponse.statusCode, message: apiMessage)
+            throw TextLensError.translationHTTPError(statusCode: statusCode, message: apiMessage)
         }
 
         do {
             let decoded = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
-            guard let content = decoded.choices.first?.message.content else {
+            let firstChoice = decoded.choices.first
+            guard let content = firstChoice?.message.content else {
+                if firstChoice?.finishReason == "length" || firstChoice?.nativeFinishReason?.contains("max") == true {
+                    throw TextLensError.translationHTTPError(
+                        statusCode: 200,
+                        message: "The model hit its output limit before returning a final translation."
+                    )
+                }
                 throw TextLensError.translationMalformedResponse
             }
 
@@ -78,6 +85,150 @@ final class TranslationService: TranslationServiceProtocol {
         }
     }
 
+    private func maxOutputTokens(for text: String, provider: TranslationProvider) -> Int {
+        let estimatedTokens = max(1600, Int(Double(text.count) * 1.4))
+        let cappedTokens = min(estimatedTokens, provider == .openRouter ? 8000 : 12000)
+        return cappedTokens
+    }
+
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 180
+        configuration.timeoutIntervalForResource = 240
+        configuration.waitsForConnectivity = true
+        return URLSession(configuration: configuration)
+    }()
+
+    private func perform(_ request: URLRequest) async throws -> (Data, Int) {
+        do {
+            let (data, response) = try await Self.session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw TextLensError.translationMalformedResponse
+            }
+            return (data, httpResponse.statusCode)
+        } catch {
+            return try await performWithCurl(request)
+        }
+    }
+
+    private func performWithCurl(_ request: URLRequest) async throws -> (Data, Int) {
+        guard let url = request.url,
+              let body = request.httpBody else {
+            throw TextLensError.translationMalformedResponse
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let process = Process()
+            let configPipe = Pipe()
+            let outputPipe = Pipe()
+            let errorPipe = Pipe()
+            let bodyURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("textlens-request-\(UUID().uuidString).json")
+
+            do {
+                try body.write(to: bodyURL, options: .atomic)
+            } catch {
+                continuation.resume(throwing: error)
+                return
+            }
+
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+            process.arguments = ["-sS", "-w", "\n%{http_code}", "-K", "-"]
+            process.standardInput = configPipe
+            process.standardOutput = outputPipe
+            process.standardError = errorPipe
+
+            let headers = request.allHTTPHeaderFields ?? [:]
+            var configLines = [
+                "url = \"\(url.absoluteString)\"",
+                "request = \"\(request.httpMethod ?? "POST")\"",
+                "data = @\(bodyURL.path)",
+                "connect-timeout = 30",
+                "max-time = 240",
+            ]
+            for (key, value) in headers {
+                configLines.append("header = \"\(key): \(value)\"")
+            }
+            configLines.append("")
+
+            process.terminationHandler = { process in
+                defer {
+                    try? FileManager.default.removeItem(at: bodyURL)
+                }
+
+                let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorOutput = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+                guard process.terminationStatus == 0 else {
+                    let message = String(data: errorOutput, encoding: .utf8)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    continuation.resume(throwing: TextLensError.translationNetworkFailed(message))
+                    return
+                }
+
+                guard let separatorRange = output.range(of: Data("\n".utf8), options: .backwards) else {
+                    continuation.resume(throwing: TextLensError.translationMalformedResponse)
+                    return
+                }
+
+                let responseData = output.subdata(in: output.startIndex..<separatorRange.lowerBound)
+                let statusData = output.subdata(in: separatorRange.upperBound..<output.endIndex)
+                let statusString = String(data: statusData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let statusCode = statusString.flatMap(Int.init) else {
+                    continuation.resume(throwing: TextLensError.translationMalformedResponse)
+                    return
+                }
+
+                continuation.resume(returning: (responseData, statusCode))
+            }
+
+            do {
+                try process.run()
+                configPipe.fileHandleForWriting.write(Data(configLines.joined(separator: "\n").utf8))
+                try configPipe.fileHandleForWriting.close()
+            } catch {
+                try? FileManager.default.removeItem(at: bodyURL)
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    private func networkErrorMessage(from error: Error) -> String {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorTimedOut:
+                return "The request timed out."
+            case NSURLErrorNotConnectedToInternet:
+                return "No internet connection."
+            case NSURLErrorCannotFindHost:
+                return "Could not find the API host."
+            case NSURLErrorCannotConnectToHost:
+                return "Could not connect to the API host."
+            case NSURLErrorNetworkConnectionLost:
+                return "The network connection was lost."
+            default:
+                break
+            }
+        }
+
+        return error.localizedDescription
+    }
+
+    private func authorizationHeaderValue(for settings: TranslationSettings) -> String {
+        let apiKey = settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        switch settings.provider {
+        case .liara, .openRouter:
+            if apiKey.range(of: "Bearer ", options: [.anchored, .caseInsensitive]) != nil {
+                return apiKey
+            }
+
+            return "Bearer \(apiKey)"
+        }
+    }
+
     private func chatCompletionsURL(from baseURL: URL) -> URL {
         let normalized = baseURL.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: #"/+$"#, with: "", options: .regularExpression)
@@ -91,9 +242,10 @@ final class TranslationService: TranslationServiceProtocol {
     private func systemPrompt(targetLanguage: String) -> String {
         """
         Translate the following text to \(targetLanguage).
+        Translate the entire text completely and preserve every paragraph.
         Keep the meaning accurate and natural.
+        Do not summarize, shorten, omit, or add commentary.
         Do not add explanations.
-        If the text contains UI labels, keep the translation concise.
         Return only the translation.
         """
     }
@@ -176,13 +328,23 @@ final class TranslationService: TranslationServiceProtocol {
 
 private struct ChatCompletionRequest: Encodable {
     var model: String
+    var maxTokens: Int
+    var maxCompletionTokens: Int?
     var temperature: Double
     var messages: [ChatMessage]
+
+    private enum CodingKeys: String, CodingKey {
+        case model
+        case maxTokens = "max_tokens"
+        case maxCompletionTokens = "max_completion_tokens"
+        case temperature
+        case messages
+    }
 }
 
 private struct ChatMessage: Codable {
     var role: String
-    var content: String
+    var content: String?
 }
 
 private struct ChatCompletionResponse: Decodable {
@@ -220,6 +382,14 @@ private struct ChatCompletionResponse: Decodable {
 
     struct Choice: Decodable {
         var message: ChatMessage
+        var finishReason: String?
+        var nativeFinishReason: String?
+
+        private enum CodingKeys: String, CodingKey {
+            case message
+            case finishReason = "finish_reason"
+            case nativeFinishReason = "native_finish_reason"
+        }
     }
 }
 

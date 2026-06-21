@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @MainActor
@@ -5,29 +6,34 @@ final class TranslationPopupViewModel: ObservableObject {
     enum State: Equatable {
         case loading
         case result(text: String, costToman: Int?)
-        case failed(String)
+        case failed(message: String, action: FailureAction?)
+    }
+
+    enum FailureAction: Equatable {
+        case openScreenRecordingSettings
     }
 
     @Published var state: State = .loading
 }
 
 struct TranslationPopupView: View {
-    static let popupWidth: CGFloat = 1170
-    static let maxPopupHeight: CGFloat = 750
-    static let loadingHeight: CGFloat = 360
+    static let popupWidth: CGFloat = 760
+    static let maxPopupHeight: CGFloat = 520
+    static let loadingHeight: CGFloat = 300
 
     @ObservedObject var viewModel: TranslationPopupViewModel
     let popupHeight: CGFloat
     let onCopy: () -> Void
     let onCancel: () -> Void
     let onClose: () -> Void
+    let onFailureAction: (TranslationPopupViewModel.FailureAction) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             header
                 .padding(.horizontal, 18)
-                .padding(.top, 18)
-                .padding(.bottom, 14)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
             Divider()
                 .padding(.horizontal, 18)
@@ -35,15 +41,14 @@ struct TranslationPopupView: View {
             content
                 .frame(maxWidth: .infinity)
                 .frame(height: contentHeight)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 24)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
 
             Divider()
 
             footer
-                .padding(.horizontal, 22)
-                .padding(.top, 12)
-                .padding(.bottom, 22)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
         }
         .frame(width: Self.popupWidth, height: popupHeight)
         .background(panelBackground)
@@ -58,11 +63,16 @@ struct TranslationPopupView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 AppMark()
-                Text("TextLens")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.78))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("TextLens")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(.black.opacity(0.82))
+                    Text(headerSubtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.black.opacity(0.42))
+                }
             }
 
             Spacer()
@@ -75,8 +85,8 @@ struct TranslationPopupView: View {
                 }
 
                 Text("ترجمه")
-                    .font(.custom("Vazirmatn", size: 20).weight(.semibold))
-                    .foregroundStyle(.black.opacity(0.86))
+                    .font(.custom("Vazirmatn", size: 19).weight(.semibold))
+                    .foregroundStyle(.black.opacity(0.84))
                     .environment(\.layoutDirection, .rightToLeft)
             }
         }
@@ -86,36 +96,29 @@ struct TranslationPopupView: View {
     private var content: some View {
         switch viewModel.state {
         case .loading:
-            ZStack {
-                ProgressView()
-                    .controlSize(.large)
-                    .scaleEffect(1.08)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            LoadingGraphic()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
         case .result(let text, _):
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(rtlText(text))
-                        .font(.custom("Vazirmatn", size: 15).weight(.regular))
-                        .foregroundStyle(.black.opacity(0.86))
-                        .lineSpacing(5)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .multilineTextAlignment(.leading)
-                        .textSelection(.enabled)
-                        .environment(\.layoutDirection, .rightToLeft)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            RtlScrollTextView(text: text)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 20)
+            .background(contentCardBackground)
             .environment(\.layoutDirection, .rightToLeft)
 
-        case .failed(let message):
-            Text(message)
-                .font(.custom("Vazirmatn", size: 18).weight(.medium))
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .multilineTextAlignment(.trailing)
-                .environment(\.layoutDirection, .rightToLeft)
+        case .failed(let message, _):
+            VStack(spacing: 14) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.red)
+                Text(message)
+                    .font(.custom("Vazirmatn", size: 16).weight(.medium))
+                    .foregroundStyle(.red.opacity(0.88))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(28)
+            .background(contentCardBackground)
         }
     }
 
@@ -141,8 +144,12 @@ struct TranslationPopupView: View {
     private var footerActions: some View {
         switch viewModel.state {
         case .loading:
-            Button("لغو", action: onCancel)
-                .font(.system(size: 13, weight: .regular))
+            Button {
+                onCancel()
+            } label: {
+                Label("لغو", systemImage: "xmark")
+                    .font(.custom("Vazirmatn", size: 13).weight(.medium))
+            }
                 .buttonStyle(.bordered)
                 .controlSize(.regular)
                 .keyboardShortcut(.cancelAction)
@@ -167,7 +174,18 @@ struct TranslationPopupView: View {
             .controlSize(.regular)
             .keyboardShortcut(.cancelAction)
 
-        case .failed:
+        case .failed(_, let action):
+            if let action {
+                Button {
+                    onFailureAction(action)
+                } label: {
+                    Label("Open Screen Recording Settings", systemImage: "gear")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+            }
+
             Button("بستن", action: onClose)
                 .font(.custom("Vazirmatn", size: 13).weight(.medium))
                 .buttonStyle(.borderedProminent)
@@ -179,18 +197,169 @@ struct TranslationPopupView: View {
     private var panelBackground: some View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(.ultraThinMaterial)
-            .overlay(Color.white.opacity(0.46))
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.72),
+                        Color(red: 0.95, green: 0.97, blue: 1.0).opacity(0.64),
+                        Color(red: 1.0, green: 0.96, blue: 0.92).opacity(0.34),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+    }
+
+    private var contentCardBackground: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(Color.white.opacity(0.46))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.black.opacity(0.055), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.045), radius: 16, y: 8)
     }
 
     private var contentHeight: CGFloat {
-        max(120, popupHeight - 190)
+        max(110, popupHeight - 152)
     }
 
-    private func rtlText(_ text: String) -> String {
-        text
-            .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { "\u{202B}\($0)\u{202C}" }
-            .joined(separator: "\n")
+    private var headerSubtitle: String {
+        switch viewModel.state {
+        case .loading:
+            "Reading selected area"
+        case .result:
+            "Translation ready"
+        case .failed:
+            "Could not translate"
+        }
+    }
+
+}
+
+private struct RtlScrollTextView: NSViewRepresentable {
+    let text: String
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+
+        let textView = NSTextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.textContainerInset = .zero
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.heightTracksTextView = false
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.alignment = .right
+        textView.baseWritingDirection = .rightToLeft
+        textView.textContainer?.containerSize = NSSize(
+            width: scrollView.contentSize.width,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else {
+            return
+        }
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .right
+        paragraph.baseWritingDirection = .rightToLeft
+        paragraph.lineSpacing = 6
+
+        textView.textStorage?.setAttributedString(
+            NSAttributedString(
+                string: text,
+                attributes: [
+                    .font: NSFont(name: "Vazirmatn", size: 14) ?? .systemFont(ofSize: 14),
+                    .foregroundColor: NSColor.black.withAlphaComponent(0.84),
+                    .paragraphStyle: paragraph,
+                ]
+            )
+        )
+
+        textView.textContainer?.containerSize = NSSize(
+            width: scrollView.contentSize.width,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        textView.layoutManager?.ensureLayout(for: textView.textContainer!)
+        textView.sizeToFit()
+    }
+}
+
+private struct LoadingGraphic: View {
+    @State private var rotation: Double = 0
+    @State private var pulse = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color.blue.opacity(0.12), Color.clear],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: 96
+                    )
+                )
+                .frame(width: 210, height: 210)
+                .scaleEffect(pulse ? 1.08 : 0.94)
+
+            Circle()
+                .stroke(Color.black.opacity(0.06), lineWidth: 10)
+                .frame(width: 98, height: 98)
+
+            Circle()
+                .trim(from: 0.08, to: 0.74)
+                .stroke(
+                    AngularGradient(
+                        colors: [
+                            Color.blue.opacity(0.12),
+                            Color.blue.opacity(0.95),
+                            Color.cyan.opacity(0.76),
+                            Color.blue.opacity(0.12),
+                        ],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                )
+                .frame(width: 98, height: 98)
+                .rotationEffect(.degrees(rotation))
+
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.white.opacity(0.64))
+                .frame(width: 64, height: 64)
+                .overlay(
+                    Image(systemName: "text.viewfinder")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(Color.blue.opacity(0.9))
+                )
+                .shadow(color: .black.opacity(0.08), radius: 14, y: 6)
+        }
+        .frame(width: 240, height: 180)
+        .onAppear {
+            withAnimation(.linear(duration: 1.05).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+            withAnimation(.easeInOut(duration: 1.25).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+        }
     }
 }
 
@@ -271,6 +440,7 @@ private struct CostBadge: View {
         popupHeight: 420,
         onCopy: {},
         onCancel: {},
-        onClose: {}
+        onClose: {},
+        onFailureAction: { _ in }
     )
 }

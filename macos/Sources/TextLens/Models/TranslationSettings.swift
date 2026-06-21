@@ -31,13 +31,42 @@ enum TranslationProvider: String, CaseIterable, Identifiable {
     }
 
     var defaultModel: String {
+        modelCatalog.defaultModel
+    }
+
+    var modelCatalog: TranslationModelCatalog {
         switch self {
         case .liara:
-            "openai/gpt-4.1-mini"
+            TranslationModelCatalog(
+                defaultModel: "openai/gpt-5-nano",
+                placeholder: "Choose or type a Liara model",
+                options: [
+                    "openai/gpt-5-nano",
+                    "openai/gpt-4.1-mini",
+                    "google/gemini-2.0-flash-lite-001",
+                ]
+            )
         case .openRouter:
-            "~openai/gpt-latest"
+            TranslationModelCatalog(
+                defaultModel: "google/gemma-4-31b-it:free",
+                placeholder: "Choose an OpenRouter model",
+                options: [
+                    "google/gemma-4-31b-it:free",
+                    "openai/gpt-4.1-mini",
+                    "google/gemini-2.0-flash-lite-001",
+                    "anthropic/claude-3.5-sonnet",
+                ]
+            )
         }
     }
+
+    static let settingsDisplayOrder: [TranslationProvider] = [.openRouter, .liara]
+}
+
+struct TranslationModelCatalog: Equatable {
+    var defaultModel: String
+    var placeholder: String
+    var options: [String]
 }
 
 struct TranslationSettings: Equatable {

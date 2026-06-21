@@ -77,9 +77,10 @@ final class SettingsStore: ObservableObject {
         let apiKey = userDefaults.string(forKey: Key.apiKey(for: provider))
             ?? (canReadLegacySettings ? userDefaults.string(forKey: Key.apiKey) : nil)
             ?? defaults.apiKey
-        let baseURLString = userDefaults.string(forKey: Key.baseURL(for: provider))
+        let storedBaseURLString = userDefaults.string(forKey: Key.baseURL(for: provider))
             ?? (canReadLegacySettings ? userDefaults.string(forKey: Key.baseURL) : nil)
             ?? defaults.baseURL.absoluteString
+        let baseURLString = Self.providerCompatibleBaseURLString(storedBaseURLString, for: provider, defaults: defaults)
         let baseURL = URL(string: baseURLString) ?? defaults.baseURL
         let model = userDefaults.string(forKey: Key.model(for: provider))
             ?? (canReadLegacySettings ? userDefaults.string(forKey: Key.model) : nil)
@@ -95,5 +96,24 @@ final class SettingsStore: ObservableObject {
             model: model,
             targetLanguage: targetLanguage
         )
+    }
+
+    private static func providerCompatibleBaseURLString(
+        _ baseURLString: String,
+        for provider: TranslationProvider,
+        defaults: TranslationSettings
+    ) -> String {
+        guard let host = URL(string: baseURLString)?.host?.lowercased() else {
+            return defaults.baseURL.absoluteString
+        }
+
+        switch provider {
+        case .liara where host.contains("openrouter.ai"):
+            return defaults.baseURL.absoluteString
+        case .openRouter where host.contains("liara.ir"):
+            return defaults.baseURL.absoluteString
+        default:
+            return baseURLString
+        }
     }
 }

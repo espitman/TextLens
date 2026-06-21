@@ -7,16 +7,26 @@ final class SettingsPopoverController {
 
     init(
         settingsStore: SettingsStore,
+        historyStore: TranslationHistoryStore,
         onTranslateArea: @escaping () -> Void,
+        onOpenHistoryItem: @escaping (TranslationHistoryItem) -> Void,
         onQuit: @escaping () -> Void
     ) {
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 420, height: 640)
+        popover.contentSize = NSSize(width: 420, height: 720)
         popover.contentViewController = NSHostingController(
             rootView: SettingsView(
                 settingsStore: settingsStore,
+                historyStore: historyStore,
                 onTranslateArea: onTranslateArea,
+                onOpenHistoryItem: { [popover] item in
+                    popover.performClose(nil)
+                    onOpenHistoryItem(item)
+                },
+                onCloseSettings: { [popover] in
+                    popover.performClose(nil)
+                },
                 onQuit: onQuit
             )
         )

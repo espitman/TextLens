@@ -6,6 +6,7 @@ final class TranslationFlowController {
     private var translationPopupWindow: TranslationPopupWindow?
     private var currentTask: Task<Void, Never>?
     private let settingsStore: SettingsStore
+    private let historyStore: TranslationHistoryStore
     private let openSettings: () -> Void
     private let permissionService = PermissionService()
     private let screenshotService = ScreenshotService()
@@ -13,8 +14,13 @@ final class TranslationFlowController {
     private let translationService: TranslationServiceProtocol = TranslationService()
     private let errorPresenter = ErrorPresenter()
 
-    init(settingsStore: SettingsStore, openSettings: @escaping () -> Void) {
+    init(
+        settingsStore: SettingsStore,
+        historyStore: TranslationHistoryStore,
+        openSettings: @escaping () -> Void
+    ) {
         self.settingsStore = settingsStore
+        self.historyStore = historyStore
         self.openSettings = openSettings
     }
 
@@ -31,6 +37,15 @@ final class TranslationFlowController {
 
         isRunning = true
         runTranslateAreaShell()
+    }
+
+    @MainActor
+    func showHistoryItem(_ item: TranslationHistoryItem) {
+        translationPopupWindow?.close()
+        let popupWindow = makePopupWindow(near: Self.defaultHistoryPopupRect())
+        translationPopupWindow = popupWindow
+        popupWindow.show()
+        popupWindow.showHistoryItem(item)
     }
 
     private func runTranslateAreaShell() {
@@ -58,7 +73,6 @@ final class TranslationFlowController {
     private func handleSelectedArea(_ selection: ScreenSelection) async {
         do {
             guard permissionService.hasScreenRecordingPermission() || permissionService.requestScreenRecordingPermission() else {
-                permissionService.openScreenRecordingSettings()
                 throw TextLensError.screenRecordingPermissionMissing
             }
 
@@ -69,6 +83,7 @@ final class TranslationFlowController {
             }
             let translationResult = try await translationService.translate(recognizedText, settings: settings)
             await MainActor.run {
+                historyStore.add(translationResult)
                 translationPopupWindow?.showResult(translationResult)
                 currentTask = nil
                 isRunning = false
@@ -90,12 +105,34 @@ final class TranslationFlowController {
     @MainActor
     private func showLoadingPopup(near selectionRect: CGRect) {
         translationPopupWindow?.close()
-        let popupWindow = TranslationPopupWindow(near: selectionRect) { [weak self] in
+        let popupWindow = makePopupWindow(near: selectionRect)
+        translationPopupWindow = popupWindow
+        popupWindow.show()
+    }
+
+    @MainActor
+    private func makePopupWindow(near selectionRect: CGRect) -> TranslationPopupWindow {
+        TranslationPopupWindow(near: selectionRect) { [weak self] in
             self?.currentTask?.cancel()
             self?.currentTask = nil
             self?.isRunning = false
+        } onOpenScreenRecordingSettings: { [weak self] in
+            guard let self else {
+                return
+            }
+            if !permissionService.requestScreenRecordingPermission() {
+                permissionService.openScreenRecordingSettings()
+            }
         }
-        translationPopupWindow = popupWindow
-        popupWindow.show()
+    }
+
+    private static func defaultHistoryPopupRect() -> CGRect {
+        let visibleFrame = NSScreen.main?.visibleFrame ?? .zero
+        return CGRect(
+            x: visibleFrame.midX - 1,
+            y: visibleFrame.midY + 1,
+            width: 2,
+            height: 2
+        )
     }
 }

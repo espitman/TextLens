@@ -11,7 +11,7 @@ enum TextLensError: LocalizedError {
     case screenshotCropFailed
     case translationHTTPError(statusCode: Int, message: String?)
     case translationMalformedResponse
-    case translationNetworkFailed
+    case translationNetworkFailed(String?)
 
     var errorDescription: String? {
         switch self {
@@ -39,7 +39,11 @@ enum TextLensError: LocalizedError {
             return "Translation API returned \(statusCode)."
         case .translationMalformedResponse:
             return "TextLens could not read the translation response."
-        case .translationNetworkFailed:
+        case .translationNetworkFailed(let message):
+            if let message, !message.isEmpty {
+                return "TextLens could not reach the translation API: \(message)"
+            }
+
             return "TextLens could not reach the translation API."
         }
     }

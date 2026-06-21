@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsPopoverController: SettingsPopoverController?
     private var translationFlowController: TranslationFlowController?
     private let settingsStore = SettingsStore()
+    private let historyStore = TranslationHistoryStore()
     private lazy var hotKeyService = HotKeyService { [weak self] in
         self?.translationFlowController?.startTranslateArea()
     }
@@ -16,14 +17,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let translationFlowController = TranslationFlowController(
             settingsStore: settingsStore,
+            historyStore: historyStore,
             openSettings: { [weak self] in
                 self?.settingsPopoverController?.show()
             }
         )
         let settingsPopoverController = SettingsPopoverController(
             settingsStore: settingsStore,
+            historyStore: historyStore,
             onTranslateArea: {
                 translationFlowController.startTranslateArea()
+            },
+            onOpenHistoryItem: { item in
+                translationFlowController.showHistoryItem(item)
             },
             onQuit: {
                 NSApp.terminate(nil)
