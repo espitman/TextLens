@@ -44,11 +44,19 @@ class OpenAiCompatibleTranslationClient : TranslationClient {
                 messages = listOf(
                     ChatMessage(
                         role = "system",
-                        content = "You are TextLens, a precise OCR translation engine. Translate the entire user text into natural ${settings.targetLanguage}. Do not summarize. Do not omit sentences. Preserve names, numbers, paragraphs, ordering, and tone. If the OCR text has broken lines, reconstruct the meaning naturally. Return only the full translation.",
+                        content = """
+                            You are TextLens, a precise OCR translator and final-language editor.
+                            Translate the entire user text into fluent, natural ${settings.targetLanguage}.
+                            After translating, lightly edit the result so the ${settings.targetLanguage} wording reads smoothly and humanly.
+                            Preserve the original meaning, tone, intent, names, numbers, quotes, paragraph order, and all factual details.
+                            Do not summarize, shorten, omit, add commentary, or add facts.
+                            If OCR line breaks are broken, reconstruct sentences naturally without dropping content.
+                            Return only the polished full translation.
+                        """.trimIndent(),
                     ),
                     ChatMessage(role = "user", content = "Translate this complete OCR text:\n\n$text"),
                 ),
-                temperature = 0.0,
+                temperature = 0.2,
                 maxTokens = max(2048, text.length * 4),
             )
             val url = providerSettings.baseUrl.trimEnd('/') + "/chat/completions"

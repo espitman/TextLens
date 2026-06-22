@@ -11,7 +11,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.Rect
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
@@ -36,12 +35,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
 class FloatingBubbleService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -139,9 +135,9 @@ class FloatingBubbleService : Service() {
                         handleBubbleTap()
                     } else {
                         saveBubblePosition(params)
-                        startAutoParagraphSelection(
-                            focusX = params.x + view.width / 2f,
-                            focusY = params.y + view.height / 2f,
+                        startSelection(
+                            initialCenterX = params.x + view.width / 2f,
+                            initialCenterY = params.y + view.height / 2f,
                         )
                     }
                     true
@@ -176,104 +172,9 @@ class FloatingBubbleService : Service() {
             .apply()
     }
 
-    private fun startAutoParagraphSelection(focusX: Float, focusY: Float) {
-        if (!captureService.canCapture) {
-            showErrorPopup("Accessibility permission is required. Long press the bubble, open TextLens, then enable Accessibility in Permission Flow.")
-            return
-        }
-
-        activeJob?.cancel()
-        activeJob = scope.launch {
-            removePopup()
-            removeSelection()
-            bubbleView?.visibility = View.GONE
-            try {
-                delay(120)
-                val probeArea = paragraphProbeArea(focusX, focusY)
-                val probeBitmap = captureService.capture(probeArea)
-                val area = try {
-                    paragraphAreaFromLines(
-                        lines = ocrEngine.recognizeTextLines(probeBitmap),
-                        probeArea = probeArea,
-                        focusX = focusX,
-                        focusY = focusY,
-                    )
-                } finally {
-                    probeBitmap.recycle()
-                }
-
-                startSelection(
-                    initialCenterX = focusX,
-                    initialCenterY = focusY,
-                    initialArea = area,
-                )
-            } catch (_: Throwable) {
-                startSelection(initialCenterX = focusX, initialCenterY = focusY)
-            }
-        }
-    }
-
-    private fun paragraphProbeArea(focusX: Float, focusY: Float): ScreenArea {
-        val screenWidth = resources.displayMetrics.widthPixels
-        val screenHeight = resources.displayMetrics.heightPixels
-        val probeWidth = min(screenWidth - dp(24), dp(760)).coerceAtLeast(dp(240))
-        val probeHeight = min(screenHeight - dp(120), dp(520)).coerceAtLeast(dp(220))
-        val left = (focusX - probeWidth / 2f).toInt().coerceIn(0, (screenWidth - probeWidth).coerceAtLeast(0))
-        val top = (focusY - probeHeight / 2f).toInt().coerceIn(0, (screenHeight - probeHeight).coerceAtLeast(0))
-        return ScreenArea(left = left, top = top, width = probeWidth, height = probeHeight)
-    }
-
-    private fun paragraphAreaFromLines(
-        lines: List<com.textlens.android.ocr.OcrTextBlock>,
-        probeArea: ScreenArea,
-        focusX: Float,
-        focusY: Float,
-    ): ScreenArea? {
-        if (lines.isEmpty()) return null
-
-        val localFocusX = focusX - probeArea.left
-        val localFocusY = focusY - probeArea.top
-        val anchor = lines.minByOrNull { blockDistanceScore(it.boundingBox, localFocusX, localFocusY) } ?: return null
-        val sortedLines = lines.sortedWith(compareBy({ it.boundingBox.top }, { it.boundingBox.left }))
-        val anchorIndex = sortedLines.indexOf(anchor).takeIf { it >= 0 } ?: return null
-        val medianHeight = sortedLines.map { it.boundingBox.height() }.sorted().let { heights ->
-            heights[heights.size / 2].coerceAtLeast(12)
-        }
-        val centerSteps = sortedLines
-            .zipWithNext { current, next -> next.boundingBox.centerY() - current.boundingBox.centerY() }
-            .filter { it > 0 && it <= medianHeight * 3 }
-            .sorted()
-        val lineStep = centerSteps.getOrNull(centerSteps.size / 2) ?: (medianHeight * 1.65f).toInt()
-        val maxLineStep = (lineStep * 1.35f).toInt().coerceAtLeast((medianHeight * 1.65f).toInt())
-
-        val selected = mutableListOf(anchor)
-        var lastCenter = anchor.boundingBox.centerY()
-        for (index in anchorIndex - 1 downTo 0) {
-            val line = sortedLines[index]
-            val centerGap = lastCenter - line.boundingBox.centerY()
-            if (centerGap > maxLineStep) break
-            selected += line
-            lastCenter = line.boundingBox.centerY()
-        }
-
-        lastCenter = anchor.boundingBox.centerY()
-        for (index in anchorIndex + 1 until sortedLines.size) {
-            val line = sortedLines[index]
-            val centerGap = line.boundingBox.centerY() - lastCenter
-            if (centerGap > maxLineStep) break
-            selected += line
-            lastCenter = line.boundingBox.centerY()
-        }
-
-        val union = Rect(anchor.boundingBox)
-        selected.forEach { union.union(it.boundingBox) }
-        return union.toSelectionArea(probeArea, padding = dp(14))
-    }
-
     private fun startSelection(
         initialCenterX: Float? = null,
         initialCenterY: Float? = null,
-        initialArea: ScreenArea? = null,
     ) {
         if (!captureService.canCapture) {
             showErrorPopup("Accessibility permission is required. Long press the bubble, open TextLens, then enable Accessibility in Permission Flow.")
@@ -288,7 +189,6 @@ class FloatingBubbleService : Service() {
             context = this,
             initialCenterX = initialCenterX,
             initialCenterY = initialCenterY,
-            initialArea = initialArea,
         ) { area ->
             removeSelection()
             bubbleView?.visibility = View.VISIBLE
@@ -306,40 +206,6 @@ class FloatingBubbleService : Service() {
             },
         )
         selectionView = overlay
-    }
-
-    private fun blockDistanceScore(rect: Rect, focusX: Float, focusY: Float): Float {
-        val dx = when {
-            focusX < rect.left -> rect.left - focusX
-            focusX > rect.right -> focusX - rect.right
-            else -> 0f
-        }
-        val dy = when {
-            focusY < rect.top -> rect.top - focusY
-            focusY > rect.bottom -> focusY - rect.bottom
-            else -> 0f
-        }
-        val distance = dx * dx + dy * dy
-        val areaPenalty = 180000f / max(1f, rect.width() * rect.height().toFloat())
-        return distance + areaPenalty
-    }
-
-    private fun Rect.toSelectionArea(screen: ScreenArea, padding: Int): ScreenArea? {
-        val absoluteLeft = screen.left + this.left
-        val absoluteTop = screen.top + this.top
-        val absoluteRight = screen.left + this.right
-        val absoluteBottom = screen.top + this.bottom
-        val left = max(screen.left, absoluteLeft - padding)
-        val top = max(screen.top, absoluteTop - padding)
-        val right = min(screen.left + screen.width, absoluteRight + padding)
-        val bottom = min(screen.top + screen.height, absoluteBottom + padding)
-        val area = ScreenArea(
-            left = left,
-            top = top,
-            width = right - left,
-            height = bottom - top,
-        )
-        return area.takeIf { it.isMeaningful }
     }
 
     private fun runTranslation(area: ScreenArea) {

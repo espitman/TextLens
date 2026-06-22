@@ -1,7 +1,6 @@
 package com.textlens.android.ocr
 
 import android.graphics.Bitmap
-import android.graphics.Rect
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -28,31 +27,6 @@ class MlKitOcrEngine : OcrEngine {
         }
 
         return text
-    }
-
-    override suspend fun recognizeTextBlocks(bitmap: Bitmap): List<OcrTextBlock> {
-        val processed = process(bitmap)
-        return processed.text.textBlocks.mapNotNull { block ->
-            val box = block.boundingBox ?: return@mapNotNull null
-            OcrTextBlock(
-                text = block.text.trim(),
-                boundingBox = box.mapFromScale(processed.scale),
-            )
-        }.filter { it.text.isNotBlank() && it.boundingBox.width() >= 8 && it.boundingBox.height() >= 8 }
-    }
-
-    override suspend fun recognizeTextLines(bitmap: Bitmap): List<OcrTextBlock> {
-        val processed = process(bitmap)
-        return processed.text.textBlocks
-            .flatMap { block -> block.lines }
-            .mapNotNull { line ->
-                val box = line.boundingBox ?: return@mapNotNull null
-                OcrTextBlock(
-                    text = line.text.trim(),
-                    boundingBox = box.mapFromScale(processed.scale),
-                )
-            }
-            .filter { it.text.isNotBlank() && it.boundingBox.width() >= 8 && it.boundingBox.height() >= 8 }
     }
 
     private suspend fun process(bitmap: Bitmap): ProcessedText {
@@ -84,14 +58,6 @@ class MlKitOcrEngine : OcrEngine {
         )
     }
 }
-
-private fun Rect.mapFromScale(scale: Float): Rect =
-    Rect(
-        (left / scale).toInt(),
-        (top / scale).toInt(),
-        (right / scale).toInt(),
-        (bottom / scale).toInt(),
-    )
 
 private data class ScaledBitmap(
     val bitmap: Bitmap,

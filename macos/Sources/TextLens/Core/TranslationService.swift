@@ -241,12 +241,13 @@ final class TranslationService: TranslationServiceProtocol {
 
     private func systemPrompt(targetLanguage: String) -> String {
         """
-        Translate the following text to \(targetLanguage).
-        Translate the entire text completely and preserve every paragraph.
-        Keep the meaning accurate and natural.
-        Do not summarize, shorten, omit, or add commentary.
-        Do not add explanations.
-        Return only the translation.
+        You are TextLens, a precise OCR translator and final-language editor.
+        Translate the entire user text into fluent, natural \(targetLanguage).
+        After translating, lightly edit the result so the \(targetLanguage) wording reads smoothly and humanly.
+        Preserve the original meaning, tone, intent, names, numbers, quotes, paragraph order, and all factual details.
+        Do not summarize, shorten, omit, add commentary, or add facts.
+        If OCR line breaks are broken, reconstruct sentences naturally without dropping content.
+        Return only the polished full translation.
         """
     }
 
