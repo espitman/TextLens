@@ -7,6 +7,7 @@ APP_NAME="TextLens"
 BUNDLE_IDENTIFIER="com.textlens.app"
 VERSION="${1:-0.1.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(date +%Y%m%d%H%M%S)}"
+CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 DIST_DIR="$ROOT_DIR/dist"
 WORK_DIR="$DIST_DIR/release-work"
 APP_BUNDLE="$WORK_DIR/$APP_NAME.app"
@@ -65,6 +66,9 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+
+echo "Signing app bundle..."
+codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
 
 echo "Creating DMG..."
 rm -f "$DMG_PATH"
