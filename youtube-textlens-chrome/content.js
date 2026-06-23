@@ -460,6 +460,20 @@ function ensureBadge() {
       font-size: 12px;
       font-weight: 900;
     }
+    #${SETTINGS_MODAL_ID} .textlens-position-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255, 208, 0, 0.28);
+      background: rgba(255, 208, 0, 0.06);
+    }
+    #${SETTINGS_MODAL_ID} .textlens-position-action span {
+      color: #cfcfcf;
+      font-size: 13px;
+      font-weight: 800;
+    }
     #${SETTINGS_MODAL_ID} .textlens-modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -706,6 +720,10 @@ function showSettingsModal() {
           <span class="textlens-setting-value" data-role="opacityValue">${subtitleSettings.opacity}%</span>
           <input data-role="opacity" type="range" min="0" max="100" step="1" value="${subtitleSettings.opacity}" />
         </label>
+        <div class="textlens-position-action">
+          <span>Subtitle position</span>
+          <button type="button" data-role="centerSubtitle">Center horizontally</button>
+        </div>
       </div>
     </div>
   `;
@@ -749,6 +767,15 @@ function showSettingsModal() {
       modal.querySelector('[data-role="backgroundColor"]').value = button.dataset.color;
       update();
     });
+  });
+  modal.querySelector('[data-role="centerSubtitle"]').addEventListener("click", async () => {
+    subtitlePosition = {
+      ...subtitlePosition,
+      leftPercent: 50
+    };
+    const subtitle = document.getElementById(SUBTITLE_ID);
+    if (subtitle) applySubtitlePosition(subtitle);
+    await saveSubtitlePosition();
   });
   attachSettingsDrag(modal);
   modal.addEventListener("click", (event) => {
