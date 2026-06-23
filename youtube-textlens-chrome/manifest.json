@@ -15,11 +15,5 @@
       "js": ["content.js"],
       "run_at": "document_idle"
     }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["assets/belgium-iran-fa.srt"],
-      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"]
-    }
   ]
 }

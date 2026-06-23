@@ -9,7 +9,7 @@ Chrome extension for detecting YouTube videos and rendering synced TextLens subt
 - Builds a canonical YouTube video link.
 - Shows a floating TextLens control badge on the YouTube page.
 - Shows the detected video in the extension popup.
-- Renders synced Persian subtitles for the bundled sample video.
+- Loads a user-selected `.srt` file for the current YouTube video.
 - Lets subtitle position, font size, colors, and opacity be adjusted from the on-page settings panel.
 
 ## Install In Chrome

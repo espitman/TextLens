@@ -1,13 +1,11 @@
 const BADGE_ID = "textlens-youtube-detector";
-const MODAL_ID = "textlens-youtube-detector-modal";
 const SETTINGS_MODAL_ID = "textlens-settings-modal";
 const SUBTITLE_ID = "textlens-youtube-subtitle";
 const BADGE_MINIMIZED_KEY = "textLensBadgeMinimized";
 const SUBTITLE_POSITION_KEY = "textLensSubtitlePosition";
 const SUBTITLE_SETTINGS_KEY = "textLensSubtitleSettings";
+const MANUAL_SUBTITLES_KEY = "textLensManualSubtitles";
 const SETTINGS_POSITION_KEY = "textLensSettingsPosition";
-const TEST_VIDEO_ID = "dIojWjpucwc";
-const TEST_SUBTITLE_ASSET = "assets/belgium-iran-fa.srt";
 const TEXT_COLOR_PRESETS = ["#ffd000", "#ffffff", "#f8fafc", "#38bdf8", "#4ade80", "#fb7185"];
 const BACKGROUND_COLOR_PRESETS = ["#000000", "#111827", "#1f2937", "#3f2f00", "#052e2b", "#3b0764"];
 
@@ -160,7 +158,8 @@ function ensureBadge() {
           </div>
         </div>
         <div class="textlens-actions">
-          <button type="button" data-role="copy">Copy</button>
+          <button type="button" data-role="loadSrt">Load SRT</button>
+          <input class="textlens-badge-file-input" data-role="badgeSrtFile" type="file" accept=".srt,text/plain" />
           <button class="textlens-icon-button" type="button" data-role="settings" title="Subtitle settings" aria-label="Subtitle settings">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Zm8.2 3.6c0-.5 0-1-.1-1.4l2-1.5-2-3.5-2.4 1a8.2 8.2 0 0 0-2.4-1.4L15 2h-4l-.4 2.8c-.8.3-1.6.7-2.4 1.4l-2.4-1-2 3.5 2 1.5a9 9 0 0 0 0 2.8l-2 1.5 2 3.5 2.4-1c.7.6 1.5 1 2.4 1.4L11 22h4l.4-2.8c.8-.3 1.6-.7 2.4-1.4l2.4 1 2-3.5-2-1.5c.1-.5.1-1 .1-1.4Z" fill="currentColor"/>
@@ -308,6 +307,9 @@ function ensureBadge() {
       align-items: center;
       gap: 7px;
     }
+    #${BADGE_ID} .textlens-badge-file-input {
+      display: none;
+    }
     #${BADGE_ID} .textlens-icon-button {
       display: grid;
       width: 32px;
@@ -321,7 +323,6 @@ function ensureBadge() {
       width: 17px;
       height: 17px;
     }
-    #${MODAL_ID},
     #${SETTINGS_MODAL_ID} {
       position: fixed;
       inset: 0;
@@ -336,7 +337,6 @@ function ensureBadge() {
     #${SETTINGS_MODAL_ID} {
       pointer-events: none;
     }
-    #${MODAL_ID} .textlens-modal-card,
     #${SETTINGS_MODAL_ID} .textlens-modal-card {
       width: min(520px, 100%);
       padding: 22px;
@@ -364,7 +364,6 @@ function ensureBadge() {
       user-select: none;
       -webkit-user-select: none;
     }
-    #${MODAL_ID} button,
     #${SETTINGS_MODAL_ID} button {
       border: 0;
       background: #ffd000;
@@ -391,27 +390,12 @@ function ensureBadge() {
       background: #ffd000;
       color: #080808;
     }
-    #${MODAL_ID} .textlens-modal-title,
     #${SETTINGS_MODAL_ID} .textlens-modal-title {
       margin: 0 0 10px;
       color: #ffd000;
       font-size: 14px;
       font-weight: 900;
       text-transform: uppercase;
-    }
-    #${MODAL_ID} .textlens-modal-url {
-      padding: 12px;
-      background: #060606;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #f5f5f5;
-      font-size: 13px;
-      line-height: 1.45;
-      overflow-wrap: anywhere;
-    }
-    #${MODAL_ID} .textlens-modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 16px;
     }
     #${SETTINGS_MODAL_ID} .textlens-settings-grid {
       display: grid;
@@ -528,12 +512,14 @@ function ensureBadge() {
   document.documentElement.appendChild(style);
   document.documentElement.appendChild(badge);
 
-  badge.querySelector('[data-role="copy"]').addEventListener("click", async () => {
-    const videoId = extractVideoIdFromLocation();
-    if (!videoId) return;
-    const url = canonicalVideoUrl(videoId);
-    await navigator.clipboard.writeText(url);
-    showCopiedModal(url);
+  badge.querySelector('[data-role="loadSrt"]').addEventListener("click", () => {
+    badge.querySelector('[data-role="badgeSrtFile"]').click();
+  });
+  badge.querySelector('[data-role="badgeSrtFile"]').addEventListener("change", async (event) => {
+    await loadManualSrtFromInput(event.target.files?.[0], {
+      triggerButton: badge.querySelector('[data-role="loadSrt"]')
+    });
+    event.target.value = "";
   });
   badge.querySelector('[data-role="settings"]').addEventListener("click", () => {
     showSettingsModal();
@@ -753,7 +739,7 @@ function showSettingsModal() {
     await saveSubtitleSettings();
   };
 
-  modal.querySelectorAll("input").forEach((input) => {
+  modal.querySelectorAll('input[type="range"], input[type="color"]').forEach((input) => {
     input.addEventListener("input", update);
   });
   modal.querySelectorAll('[data-role="textColorSwatch"]').forEach((button) => {
@@ -786,30 +772,6 @@ function showSettingsModal() {
 
   document.documentElement.appendChild(modal);
   syncSwatches();
-}
-
-function showCopiedModal(url) {
-  document.getElementById(MODAL_ID)?.remove();
-
-  const modal = document.createElement("div");
-  modal.id = MODAL_ID;
-  modal.innerHTML = `
-    <div class="textlens-modal-card" role="dialog" aria-modal="true">
-      <p class="textlens-modal-title">Copied YouTube link</p>
-      <div class="textlens-modal-url">${url}</div>
-      <div class="textlens-modal-actions">
-        <button type="button" data-role="close">Close</button>
-      </div>
-    </div>
-  `;
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal || event.target.dataset.role === "close") {
-      modal.remove();
-    }
-  });
-
-  document.documentElement.appendChild(modal);
 }
 
 function updateBadge(videoId) {
@@ -917,7 +879,7 @@ function renderSubtitleAt(time) {
   if (!subtitle) return;
 
   if (subtitleCues.length === 0) {
-    subtitle.textContent = "سلام";
+    subtitle.textContent = "";
     return;
   }
 
@@ -929,21 +891,88 @@ function renderSubtitleAt(time) {
   subtitle.textContent = cueIndex === -1 ? "" : subtitleCues[cueIndex].text;
 }
 
-async function loadSubtitleForVideo(videoId) {
-  if (videoId !== TEST_VIDEO_ID || loadedSubtitleVideoId === videoId) return;
+function setSubtitleCues(cues, videoId) {
+  subtitleCues = cues;
+  loadedSubtitleVideoId = videoId;
+  activeCueIndex = -1;
+  renderSubtitleAt(readPlaybackState().time);
+}
+
+async function getManualSubtitles() {
+  const stored = await chrome.storage.local.get(MANUAL_SUBTITLES_KEY);
+  return stored[MANUAL_SUBTITLES_KEY] || {};
+}
+
+async function saveManualSubtitle(videoId, payload) {
+  const subtitles = await getManualSubtitles();
+  subtitles[videoId] = payload;
+  await chrome.storage.local.set({
+    [MANUAL_SUBTITLES_KEY]: subtitles
+  });
+}
+
+async function loadManualSubtitleForVideo(videoId) {
+  const subtitles = await getManualSubtitles();
+  const manualSubtitle = subtitles[videoId];
+  if (!manualSubtitle?.text) return false;
+
+  const cues = parseSrt(manualSubtitle.text);
+  if (cues.length === 0) return false;
+
+  setSubtitleCues(cues, videoId);
+  return true;
+}
+
+function flashSrtButton(button, label) {
+  if (!button) return;
+  const originalLabel = button.dataset.defaultLabel || button.textContent;
+  button.dataset.defaultLabel = originalLabel;
+  button.textContent = label;
+  window.setTimeout(() => {
+    button.textContent = button.dataset.defaultLabel || "Load SRT";
+  }, 1600);
+}
+
+async function loadManualSrtFromInput(file, options = {}) {
+  const { triggerButton } = options;
+  const videoId = extractVideoIdFromLocation();
+
+  if (!file) return;
+
+  if (!videoId) {
+    flashSrtButton(triggerButton, "Open video first");
+    return;
+  }
 
   try {
-    const response = await fetch(chrome.runtime.getURL(TEST_SUBTITLE_ASSET));
-    const text = await response.text();
-    subtitleCues = parseSrt(text);
-    loadedSubtitleVideoId = videoId;
-    activeCueIndex = -1;
+    if (triggerButton) triggerButton.textContent = "Loading...";
+    const text = await file.text();
+    const cues = parseSrt(text);
+    if (cues.length === 0) {
+      throw new Error("No valid SRT cues found.");
+    }
+
+    await saveManualSubtitle(videoId, {
+      cueCount: cues.length,
+      name: file.name,
+      text
+    });
+    setSubtitleCues(cues, videoId);
+    ensureSubtitle();
+    flashSrtButton(triggerButton, `Loaded ${cues.length}`);
   } catch (error) {
-    console.error("[TextLens] Could not load subtitle", error);
-    subtitleCues = [];
-    loadedSubtitleVideoId = "";
-    activeCueIndex = -1;
+    console.error("[TextLens] Could not load manual SRT", error);
+    flashSrtButton(triggerButton, "Invalid SRT");
   }
+}
+
+async function loadSubtitleForVideo(videoId) {
+  if (loadedSubtitleVideoId === videoId) return;
+
+  const hasManualSubtitle = await loadManualSubtitleForVideo(videoId);
+  if (hasManualSubtitle) return;
+
+  setSubtitleCues([], videoId);
 }
 
 function ensureSubtitle() {
@@ -959,7 +988,6 @@ function ensureSubtitle() {
   if (!subtitle) {
     subtitle = document.createElement("div");
     subtitle.id = SUBTITLE_ID;
-    subtitle.textContent = "سلام";
     player.appendChild(subtitle);
   }
 
