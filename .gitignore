@@ -18,6 +18,10 @@ build/
 # Release artifacts
 dist/
 
+# Local test spikes
+apps/tv-overlay-test/
+apps/youtube-iframe-electron-test/
+
 # Local environment
 .env
 .env.*

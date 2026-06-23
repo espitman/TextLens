@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TextLens YouTube</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">TextLens</p>
+      <h1>YouTube subtitles</h1>
+      <section id="state" class="state">Checking active tab...</section>
+      <button id="copyButton" type="button" disabled>Copy Link</button>
+    </main>
+    <div id="copyModal" class="modal" hidden>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h2 id="modalTitle">Copied link</h2>
+        <div id="modalUrl" class="modal-url"></div>
+        <button id="closeModalButton" type="button">Close</button>
+      </section>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
