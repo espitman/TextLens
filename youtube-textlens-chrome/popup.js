@@ -1,6 +1,6 @@
 const stateElement = document.getElementById("state");
-const copyButton = document.getElementById("copyButton");
-const copyModal = document.getElementById("copyModal");
+const downloadButton = document.getElementById("downloadButton");
+const downloadModal = document.getElementById("downloadModal");
 const modalUrl = document.getElementById("modalUrl");
 const closeModalButton = document.getElementById("closeModalButton");
 
@@ -20,9 +20,13 @@ function canonicalVideoUrl(videoId) {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 }
 
+function subtitleToUrl(videoUrl) {
+  return `https://subtitle.to/${videoUrl}`;
+}
+
 function renderDetected({ title, url, videoId }) {
   currentUrl = url;
-  copyButton.disabled = false;
+  downloadButton.disabled = false;
   stateElement.innerHTML = `
     <strong>${title || "Detected YouTube video"}</strong>
     <div>ID: ${videoId}</div>
@@ -32,7 +36,7 @@ function renderDetected({ title, url, videoId }) {
 
 function renderMissing() {
   currentUrl = "";
-  copyButton.disabled = true;
+  downloadButton.disabled = true;
   stateElement.textContent = "Open a YouTube watch page, then click this extension again.";
 }
 
@@ -58,24 +62,25 @@ async function loadState() {
   renderMissing();
 }
 
-copyButton.addEventListener("click", async () => {
+downloadButton.addEventListener("click", async () => {
   if (!currentUrl) return;
-  await navigator.clipboard.writeText(currentUrl);
-  modalUrl.textContent = currentUrl;
-  copyModal.hidden = false;
-  copyButton.textContent = "Copied";
+  const targetUrl = subtitleToUrl(currentUrl);
+  await chrome.tabs.create({ url: targetUrl });
+  modalUrl.textContent = targetUrl;
+  downloadModal.hidden = false;
+  downloadButton.textContent = "Opened";
   setTimeout(() => {
-    copyButton.textContent = "Copy Link";
+    downloadButton.textContent = "Download with subtitle.to";
   }, 1200);
 });
 
 closeModalButton.addEventListener("click", () => {
-  copyModal.hidden = true;
+  downloadModal.hidden = true;
 });
 
-copyModal.addEventListener("click", (event) => {
-  if (event.target === copyModal) {
-    copyModal.hidden = true;
+downloadModal.addEventListener("click", (event) => {
+  if (event.target === downloadModal) {
+    downloadModal.hidden = true;
   }
 });
 

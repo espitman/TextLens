@@ -41,6 +41,10 @@ function canonicalVideoUrl(videoId) {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 }
 
+function subtitleToUrl(videoId) {
+  return `https://subtitle.to/${canonicalVideoUrl(videoId)}`;
+}
+
 function getVideoTitle() {
   return (
     document.querySelector("h1.ytd-watch-metadata yt-formatted-string")?.textContent?.trim() ||
@@ -148,24 +152,36 @@ function ensureBadge() {
     <div class="textlens-card">
       <button class="textlens-mini" type="button" data-role="expand" title="Expand TextLens">T</button>
       <div class="textlens-expanded">
+        <div class="textlens-mark" aria-hidden="true">T</div>
         <div class="textlens-main">
-          <div class="textlens-label">TextLens detected</div>
-          <div class="textlens-link" data-role="link"></div>
           <div class="textlens-live">
-            <span data-role="state">waiting</span>
+            <span class="textlens-status" data-role="state" title="Playback state">...</span>
             <span data-role="time">0:00 / 0:00</span>
             <span data-role="rate">1x</span>
           </div>
         </div>
         <div class="textlens-actions">
-          <button type="button" data-role="loadSrt">Load SRT</button>
+          <button class="textlens-icon-button" type="button" data-role="downloadSubtitle" title="Download SRT with subtitle.to" aria-label="Download SRT with subtitle.to">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a1 1 0 0 1 1 1v8.6l2.8-2.8a1 1 0 0 1 1.4 1.4l-4.5 4.5a1 1 0 0 1-1.4 0l-4.5-4.5a1 1 0 1 1 1.4-1.4l2.8 2.8V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="textlens-icon-button" type="button" data-role="loadSrt" title="Load SRT file" aria-label="Load SRT file">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Zm-.5 2.4L16.6 8H14a.5.5 0 0 1-.5-.5V5.4ZM8 13h3v-2a1 1 0 1 1 2 0v2h3a1 1 0 1 1 0 2h-3v2a1 1 0 1 1-2 0v-2H8a1 1 0 1 1 0-2Z" fill="currentColor"/>
+            </svg>
+          </button>
           <input class="textlens-badge-file-input" data-role="badgeSrtFile" type="file" accept=".srt,text/plain" />
           <button class="textlens-icon-button" type="button" data-role="settings" title="Subtitle settings" aria-label="Subtitle settings">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Zm8.2 3.6c0-.5 0-1-.1-1.4l2-1.5-2-3.5-2.4 1a8.2 8.2 0 0 0-2.4-1.4L15 2h-4l-.4 2.8c-.8.3-1.6.7-2.4 1.4l-2.4-1-2 3.5 2 1.5a9 9 0 0 0 0 2.8l-2 1.5 2 3.5 2.4-1c.7.6 1.5 1 2.4 1.4L11 22h4l.4-2.8c.8-.3 1.6-.7 2.4-1.4l2.4 1 2-3.5-2-1.5c.1-.5.1-1 .1-1.4Z" fill="currentColor"/>
             </svg>
           </button>
-          <button class="textlens-icon-button" type="button" data-role="minimize" title="Minimize" aria-label="Minimize">−</button>
+          <button class="textlens-icon-button" type="button" data-role="minimize" title="Minimize" aria-label="Minimize">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 11h12a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2Z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -196,14 +212,19 @@ function ensureBadge() {
     #${BADGE_ID} .textlens-card {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       min-height: 48px;
-      max-width: 520px;
-      padding: 12px;
-      background: rgba(8, 8, 8, 0.92);
-      border: 1px solid rgba(255, 208, 0, 0.62);
-      border-radius: 14px;
-      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.38);
+      max-width: min(560px, calc(100vw - 36px));
+      padding: 9px 10px;
+      background:
+        linear-gradient(135deg, rgba(255, 208, 0, 0.12), transparent 34%),
+        rgba(8, 8, 8, 0.86);
+      border: 1px solid rgba(255, 208, 0, 0.52);
+      border-radius: 999px;
+      box-shadow:
+        0 18px 48px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(18px) saturate(1.2);
       transition:
         width 240ms cubic-bezier(0.2, 0.9, 0.2, 1),
         max-width 240ms cubic-bezier(0.2, 0.9, 0.2, 1),
@@ -217,8 +238,8 @@ function ensureBadge() {
     #${BADGE_ID} .textlens-expanded {
       display: flex;
       align-items: center;
-      gap: 12px;
-      max-width: 490px;
+      gap: 10px;
+      max-width: 520px;
       overflow: hidden;
       opacity: 1;
       transition:
@@ -262,66 +283,97 @@ function ensureBadge() {
         transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
     }
     #${BADGE_ID} .textlens-main {
-      display: grid;
-      gap: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       min-width: 0;
     }
-    #${BADGE_ID} .textlens-label {
-      color: #ffd000;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
-    #${BADGE_ID} .textlens-link {
-      max-width: 390px;
-      overflow: hidden;
-      color: #f5f5f5;
-      font-size: 12px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    #${BADGE_ID} .textlens-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 50%;
+      background: #ffd000;
+      color: #080808;
+      font-size: 18px;
+      font-weight: 950;
+      line-height: 1;
+      box-shadow: 0 0 0 1px rgba(255, 208, 0, 0.52), 0 8px 20px rgba(255, 208, 0, 0.18);
     }
     #${BADGE_ID} .textlens-live {
       display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+      align-items: center;
+      gap: 5px;
       color: #f5f5f5;
-      font-size: 12px;
-      font-weight: 800;
+      font-size: 11px;
+      font-weight: 750;
     }
     #${BADGE_ID} .textlens-live span {
-      padding: 4px 7px;
-      background: rgba(255, 255, 255, 0.09);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      white-space: nowrap;
+    }
+    #${BADGE_ID} .textlens-live .textlens-status {
+      width: 30px;
+      justify-content: center;
+      padding: 0;
+      color: #ffd000;
+      font-size: 13px;
     }
     #${BADGE_ID} button {
-      border: 0;
-      background: #ffd000;
-      color: #080808;
+      border: 1px solid rgba(255, 208, 0, 0.42);
+      border-radius: 999px;
+      background: rgba(255, 208, 0, 0.14);
+      color: #ffd000;
       cursor: pointer;
       font-size: 12px;
-      font-weight: 900;
-      padding: 8px 10px;
+      font-weight: 850;
+      padding: 0;
+      transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        transform 140ms ease;
+    }
+    #${BADGE_ID} button:hover {
+      background: #ffd000;
+      border-color: #ffd000;
+      color: #080808;
+      transform: translateY(-1px);
     }
     #${BADGE_ID} .textlens-actions {
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
     }
     #${BADGE_ID} .textlens-badge-file-input {
       display: none;
     }
     #${BADGE_ID} .textlens-icon-button {
       display: grid;
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       place-items: center;
       padding: 0;
-      font-size: 18px;
+      font-size: 16px;
       line-height: 1;
     }
     #${BADGE_ID} .textlens-icon-button svg {
-      width: 17px;
-      height: 17px;
+      width: 18px;
+      height: 18px;
+    }
+    #${BADGE_ID} .textlens-icon-button.is-flashing {
+      background: #ffd000;
+      border-color: #ffd000;
+      color: #080808;
+      box-shadow: 0 0 0 4px rgba(255, 208, 0, 0.16);
     }
     #${SETTINGS_MODAL_ID} {
       position: fixed;
@@ -514,6 +566,11 @@ function ensureBadge() {
 
   badge.querySelector('[data-role="loadSrt"]').addEventListener("click", () => {
     badge.querySelector('[data-role="badgeSrtFile"]').click();
+  });
+  badge.querySelector('[data-role="downloadSubtitle"]').addEventListener("click", () => {
+    const videoId = extractVideoIdFromLocation();
+    if (!videoId) return;
+    window.open(subtitleToUrl(videoId), "_blank", "noopener,noreferrer");
   });
   badge.querySelector('[data-role="badgeSrtFile"]').addEventListener("change", async (event) => {
     await loadManualSrtFromInput(event.target.files?.[0], {
@@ -775,9 +832,7 @@ function showSettingsModal() {
 }
 
 function updateBadge(videoId) {
-  const badge = ensureBadge();
-  const url = canonicalVideoUrl(videoId);
-  badge.querySelector('[data-role="link"]').textContent = url;
+  ensureBadge();
   updatePlaybackBadge();
 }
 
@@ -786,7 +841,7 @@ function updatePlaybackBadge() {
   if (!badge) return;
 
   const playback = readPlaybackState();
-  const stateText = playback.isFound ? (playback.isPaused ? "paused" : "playing") : "no video";
+  const stateText = playback.isFound ? (playback.isPaused ? "II" : "▶") : "...";
   badge.querySelector('[data-role="state"]').textContent = stateText;
   badge.querySelector('[data-role="time"]').textContent =
     `${formatTime(playback.time)} / ${formatTime(playback.duration)}`;
@@ -925,6 +980,20 @@ async function loadManualSubtitleForVideo(videoId) {
 
 function flashSrtButton(button, label) {
   if (!button) return;
+  if (button.classList.contains("textlens-icon-button")) {
+    const originalTitle = button.dataset.defaultTitle || button.title || "Load SRT file";
+    button.dataset.defaultTitle = originalTitle;
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.classList.add("is-flashing");
+    window.setTimeout(() => {
+      button.title = button.dataset.defaultTitle || "Load SRT file";
+      button.setAttribute("aria-label", button.dataset.defaultTitle || "Load SRT file");
+      button.classList.remove("is-flashing");
+    }, 1600);
+    return;
+  }
+
   const originalLabel = button.dataset.defaultLabel || button.textContent;
   button.dataset.defaultLabel = originalLabel;
   button.textContent = label;
@@ -945,7 +1014,9 @@ async function loadManualSrtFromInput(file, options = {}) {
   }
 
   try {
-    if (triggerButton) triggerButton.textContent = "Loading...";
+    if (triggerButton && !triggerButton.classList.contains("textlens-icon-button")) {
+      triggerButton.textContent = "Loading...";
+    }
     const text = await file.text();
     const cues = parseSrt(text);
     if (cues.length === 0) {

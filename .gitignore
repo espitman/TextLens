@@ -21,6 +21,8 @@ dist/
 # Local test spikes
 apps/tv-overlay-test/
 apps/youtube-iframe-electron-test/
+apps/youtube-caption-extractor-test/
+apps/youtube-caption-page-extension-test/
 
 # Local environment
 .env
