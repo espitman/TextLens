@@ -24,7 +24,6 @@ const ytFetchBtn = document.getElementById('yt-fetch-btn');
 const ytLangSelect = document.getElementById('yt-lang');
 const subtitleToUrlInput = document.getElementById('subtitleto-url');
 const subtitleToOpenBtn = document.getElementById('subtitleto-open-btn');
-const subtitleToClickSrtBtn = document.getElementById('subtitleto-click-srt-btn');
 const subtitleToStatus = document.getElementById('subtitleto-status');
 const subtitleToWebview = document.getElementById('subtitleto-webview');
 const subtitleToEmpty = document.getElementById('subtitleto-empty');
@@ -51,6 +50,8 @@ let parsedBlocks = [];
 let translationProgress = {}; // index -> translated text
 let isTranslating = false;
 let shouldCancel = false;
+let subtitleToRunId = 0;
+let subtitleToAutomationRunning = false;
 
 // API Models configuration with pricing (per 1M tokens in USD)
 const modelsMap = {
@@ -501,10 +502,14 @@ function openSubtitleTo() {
     return;
   }
 
+  subtitleToRunId++;
+  subtitleToAutomationRunning = false;
+  subtitleToOpenBtn.disabled = true;
+  subtitleToOpenBtn.textContent = 'Fetching...';
   subtitleToWebview.setAttribute('src', targetUrl);
   subtitleToWebview.classList.add('active');
-  subtitleToEmpty.classList.add('hidden');
-  subtitleToStatus.textContent = 'Loading subtitle.to...';
+  subtitleToEmpty.classList.remove('hidden');
+  subtitleToStatus.textContent = 'Loading subtitle.to in background...';
 }
 
 subtitleToOpenBtn.addEventListener('click', openSubtitleTo);
@@ -516,15 +521,10 @@ subtitleToUrlInput.addEventListener('keydown', (event) => {
 
 async function clickFirstSubtitleToSrt() {
   if (!subtitleToWebview.getAttribute('src')) {
-    alert('Open a subtitle.to page first.');
-    return;
+    return { ok: false, reason: 'Open a subtitle.to page first.' };
   }
 
-  subtitleToClickSrtBtn.disabled = true;
-  subtitleToStatus.textContent = 'Searching for SRT...';
-
-  try {
-    const result = await subtitleToWebview.executeJavaScript(`
+  return subtitleToWebview.executeJavaScript(`
       (() => {
         const visible = (el) => {
           const rect = el.getBoundingClientRect();
@@ -535,12 +535,25 @@ async function clickFirstSubtitleToSrt() {
         const textOf = (el) => (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
         const candidates = Array.from(document.querySelectorAll('a, button, [role="button"]'))
           .filter(visible)
-          .map((el) => ({ el, text: textOf(el) }))
-          .filter((item) => /(^|\\b)SRT(\\b|$)/i.test(item.text));
+          .map((el) => {
+            const text = textOf(el);
+            const label = [
+              text,
+              el.getAttribute('aria-label') || '',
+              el.getAttribute('title') || '',
+              el.getAttribute('href') || ''
+            ].join(' ');
+            return { el, text, label, rowText: textOf(el.closest('tr, li, .row, .list-group-item, div') || el) };
+          })
+          .filter((item) => {
+            const shortButtonText = item.text.length <= 24 && /(^|\\b)SRT(\\b|$)/i.test(item.text);
+            const explicitSrtLabel = /(^|[\\s/_?&=-])SRT($|[\\s/_?&=-])/i.test(item.label);
+            const hugePageText = item.text.length > 80;
+            return !hugePageText && (shortButtonText || explicitSrtLabel);
+          });
 
         const englishCandidate = candidates.find((item) => {
-          const row = item.el.closest('tr, li, .row, .list-group-item, div');
-          return row && /English/i.test(textOf(row));
+          return /English/i.test(item.rowText);
         });
 
         const target = (englishCandidate || candidates[0])?.el;
@@ -553,27 +566,63 @@ async function clickFirstSubtitleToSrt() {
         return { ok: true, text: textOf(target) };
       })();
     `);
+}
 
-    if (result && result.ok) {
-      subtitleToStatus.textContent = `Clicked ${result.text || 'SRT'}.`;
-    } else {
-      subtitleToStatus.textContent = result?.reason || 'SRT button not found.';
+async function runSubtitleToAutomation(runId) {
+  if (subtitleToAutomationRunning) return;
+  subtitleToAutomationRunning = true;
+
+  for (let attempt = 1; attempt <= 30; attempt++) {
+    if (runId !== subtitleToRunId) return;
+
+    subtitleToStatus.textContent = `Searching for SRT... ${attempt}/30`;
+    await new Promise(resolve => setTimeout(resolve, attempt <= 3 ? 900 : 1500));
+
+    try {
+      const result = await clickFirstSubtitleToSrt();
+      if (result && result.ok) {
+        subtitleToStatus.textContent = `Clicked ${result.text || 'SRT'}, waiting for download...`;
+        return;
+      }
+    } catch (error) {
+      subtitleToStatus.textContent = error.message || 'Could not inspect subtitle.to.';
     }
-  } catch (error) {
-    subtitleToStatus.textContent = error.message || 'Could not click SRT.';
-  } finally {
-    subtitleToClickSrtBtn.disabled = false;
+  }
+
+  if (runId === subtitleToRunId) {
+    subtitleToStatus.textContent = 'SRT button not found. Try again or use the normal YouTube fetch.';
+    subtitleToOpenBtn.disabled = false;
+    subtitleToOpenBtn.textContent = 'Fetch SRT';
   }
 }
 
-subtitleToClickSrtBtn.addEventListener('click', clickFirstSubtitleToSrt);
 subtitleToWebview.addEventListener('did-finish-load', () => {
-  subtitleToStatus.textContent = 'Page loaded. Click first SRT when the list is visible.';
+  subtitleToStatus.textContent = 'Page loaded. Waiting for SRT list...';
+  runSubtitleToAutomation(subtitleToRunId);
 });
 subtitleToWebview.addEventListener('did-fail-load', (event) => {
   if (event.errorCode !== -3) {
     subtitleToStatus.textContent = `Load failed: ${event.errorDescription || event.errorCode}`;
+    subtitleToOpenBtn.disabled = false;
+    subtitleToOpenBtn.textContent = 'Fetch SRT';
   }
+});
+
+window.electronAPI.onSubtitleToDownload((payload) => {
+  subtitleToOpenBtn.disabled = false;
+  subtitleToOpenBtn.textContent = 'Fetch SRT';
+
+  if (!payload || !payload.ok) {
+    subtitleToStatus.textContent = payload?.error || 'Download failed.';
+    return;
+  }
+
+  subtitleToStatus.textContent = `Downloaded ${payload.name}.`;
+  setLoadedFile({
+    name: payload.name,
+    path: payload.path,
+    content: payload.content
+  });
 });
 
 // YouTube Subtitles Fetch Event

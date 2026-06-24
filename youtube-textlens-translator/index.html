@@ -104,15 +104,14 @@
           <div class="subtitleto-header">
             <div>
               <p class="eyebrow">Alternative caption extractor</p>
-              <h2>Open with subtitle.to</h2>
-              <p>Add <strong>subtitle.to/</strong> before the YouTube URL and use the site manually for now.</p>
+              <h2>Fetch with subtitle.to</h2>
+              <p>TextLens opens subtitle.to in the background, clicks the first English SRT, and loads the downloaded file.</p>
             </div>
             <div class="subtitleto-input-group">
               <input type="text" id="subtitleto-url" placeholder="https://www.youtube.com/watch?v=...">
-              <button id="subtitleto-open-btn" class="button primary" type="button">Open in WebView</button>
+              <button id="subtitleto-open-btn" class="button primary" type="button">Fetch SRT</button>
             </div>
             <div class="subtitleto-tools">
-              <button id="subtitleto-click-srt-btn" class="button secondary" type="button">Click first SRT</button>
               <span id="subtitleto-status" class="subtitleto-status">Open a page first.</span>
             </div>
           </div>
@@ -127,7 +126,7 @@
             <div id="subtitleto-empty" class="subtitleto-empty">
               <div class="drop-icon">↗</div>
               <h2>Paste a YouTube link</h2>
-              <p>The generated subtitle.to page will open here.</p>
+              <p>The subtitle.to page runs hidden in the background.</p>
             </div>
           </div>
         </section>

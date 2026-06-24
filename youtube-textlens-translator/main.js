@@ -1,8 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const { getSubtitles, getVideoDetails } = require('youtube-caption-extractor');
+
+const SUBTITLE_TO_PARTITION = 'persist:textlens-subtitleto';
 
 // Helper function to extract YouTube video ID from URL
 function extractVideoId(input) {
@@ -166,7 +168,53 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
+function setupSubtitleToDownloadBridge() {
+  const subtitleToSession = session.fromPartition(SUBTITLE_TO_PARTITION);
+
+  subtitleToSession.on('will-download', (event, item) => {
+    const fallbackName = `subtitleto-${Date.now()}.srt`;
+    const fileName = path.basename(item.getFilename() || fallbackName) || fallbackName;
+    const savePath = path.join(app.getPath('temp'), fileName);
+
+    item.setSavePath(savePath);
+
+    item.once('done', (_event, state) => {
+      const windows = BrowserWindow.getAllWindows();
+      if (state !== 'completed') {
+        windows.forEach((win) => {
+          win.webContents.send('subtitleto-download', {
+            ok: false,
+            error: `Download ${state}.`
+          });
+        });
+        return;
+      }
+
+      try {
+        const content = fs.readFileSync(savePath, 'utf-8');
+        windows.forEach((win) => {
+          win.webContents.send('subtitleto-download', {
+            ok: true,
+            name: fileName,
+            path: savePath,
+            content
+          });
+        });
+      } catch (error) {
+        windows.forEach((win) => {
+          win.webContents.send('subtitleto-download', {
+            ok: false,
+            error: error.message || 'Could not read downloaded SRT.'
+          });
+        });
+      }
+    });
+  });
+}
+
 app.whenReady().then(() => {
+  setupSubtitleToDownloadBridge();
+
   // IPC Handlers
   
   // 1. Fetch system API keys from macOS Defaults com.textlens.app
