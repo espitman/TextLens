@@ -33,3 +33,11 @@ android/local.properties
 android/*.jks
 android/*.keystore
 android/keystores/
+tv-textlens/local.properties
+tv-textlens/*.jks
+tv-textlens/*.keystore
+tv-textlens/keystores/
+
+# Node
+node_modules/
+package-lock.json

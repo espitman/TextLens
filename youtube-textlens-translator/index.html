@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TextLens Subtitle Translator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar / Settings Panel -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo-dot"></span>
+        <h1>TEXT<span>LENS</span></h1>
+      </div>
+      <p class="subtitle">Subtitle Translator</p>
+
+      <div class="divider"></div>
+
+      <!-- API Settings -->
+      <section class="settings-group">
+        <label class="eyebrow">API Provider</label>
+        <div class="select-wrapper">
+          <select id="api-provider">
+            <option value="openrouter">OpenRouter</option>
+            <option value="liara">Liara</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <label class="eyebrow" id="key-label">OpenRouter API Key</label>
+        <div class="input-wrapper">
+          <input type="password" id="api-key" placeholder="Paste your API key here...">
+          <button class="toggle-password" id="toggle-key-visibility" type="button">👁️</button>
+        </div>
+        <p class="help-text">API keys are stored safely on your device.</p>
+      </section>
+
+      <section class="settings-group">
+        <label class="eyebrow">Model</label>
+        <div class="select-wrapper">
+          <select id="model-select">
+            <!-- Populated via JS based on provider -->
+          </select>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <div class="settings-row">
+          <label class="eyebrow">Speed (Concurrency)</label>
+          <span id="concurrency-val">4</span>
+        </div>
+        <input type="range" id="concurrency-slider" min="1" max="8" value="4" class="slider">
+        <p class="help-text">How many requests to run in parallel.</p>
+      </section>
+
+      <div class="sidebar-footer">
+        <p>TextLens Subtitle Translator v1.0.0</p>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+      <!-- Workspace Navigation Tabs -->
+      <div class="workspace-tabs" id="workspace-tabs">
+        <button id="tab-yt" class="tab-btn active">YouTube Link</button>
+        <button id="tab-file" class="tab-btn">Local SRT File</button>
+      </div>
+
+      <!-- 1. YouTube Input View -->
+      <div id="view-yt" class="view-panel active">
+        <div class="drop-zone" style="cursor: default; border-style: solid;">
+          <div class="drop-icon">🎥</div>
+          <h2>Translate YouTube Subtitles</h2>
+          <p>Enter a YouTube video URL to extract and translate its captions</p>
+          
+          <div class="yt-input-group">
+            <input type="text" id="yt-url" placeholder="https://www.youtube.com/watch?v=...">
+            <button id="yt-fetch-btn" class="button primary">Fetch Subtitles</button>
+          </div>
+          
+          <div class="yt-settings-row">
+            <label class="eyebrow" style="margin: 0;">Subtitles Language</label>
+            <div class="select-wrapper" style="width: 150px; margin-left: 10px;">
+              <select id="yt-lang">
+                <option value="en">English (en)</option>
+                <option value="a.en">English (auto-generated)</option>
+                <option value="fa">Persian (fa)</option>
+                <option value="es">Spanish (es)</option>
+                <option value="fr">French (fr)</option>
+                <option value="de">German (de)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Local File Upload View -->
+      <div id="view-upload" class="view-panel">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon">📥</div>
+          <h2>Drag & Drop your English SRT file here</h2>
+          <p>or</p>
+          <button id="browse-btn" class="button secondary">Browse Subtitles</button>
+        </div>
+      </div>
+
+      <!-- 3. Processing View -->
+      <div id="view-translate" class="view-panel">
+        <div class="file-card">
+          <div class="file-details">
+            <span class="file-icon">📄</span>
+            <div>
+              <h3 id="loaded-file-name">filename.srt</h3>
+              <p id="loaded-file-info">0 blocks • Est. time: ~0s • Est. Cost: $0.00</p>
+            </div>
+          </div>
+          <button id="start-btn" class="button primary">Translate to Persian</button>
+          <button id="reset-btn" class="button secondary" style="display: none;">Cancel</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Progress Tracking -->
+        <div class="progress-section" id="progress-container" style="display: none;">
+          <div class="progress-header">
+            <span class="status-badge" id="status-badge">Ready</span>
+            <span class="progress-pct" id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+
+          <div class="layout-grid">
+            <!-- Logs Panel -->
+            <div class="panel-box">
+              <label class="eyebrow">Translation Logs</label>
+              <div class="log-output" id="log-output">
+                Waiting to start...
+              </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="panel-box">
+              <label class="eyebrow">Persian Preview</label>
+              <div class="preview-output persian" id="preview-output" dir="rtl">
+                ترجمه زیرنویس در این بخش نمایش داده می‌شود.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Panel -->
+        <div class="success-box" id="success-box" style="display: none;">
+          <div class="success-icon">✨</div>
+          <h2>Translation Completed Successfully!</h2>
+          <p>All subtitle blocks have been translated. You can now save the file.</p>
+          <div class="success-actions">
+            <button id="save-btn" class="button primary">Save Persian Subtitles (.srt)</button>
+            <button id="done-btn" class="button secondary">Translate Another File</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="translator.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
