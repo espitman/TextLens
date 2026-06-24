@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TextLens TV</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --gold: #ffd21a;
+        --gold-2: #ffb800;
+        --ink: #050505;
+        --panel: #10100d;
+        --panel-2: #18170f;
+        --line: rgba(255, 210, 26, 0.22);
+        --muted: #a7a7a7;
+        --text: #f7f7f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(255, 210, 26, 0.16), transparent 34rem),
+          linear-gradient(145deg, #050505 0%, #0e0d09 52%, #030303 100%);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        cursor: pointer;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 24px 0;
+      }
+
+      .hero,
+      .card {
+        border: 1px solid var(--line);
+        background: rgba(16, 16, 13, 0.93);
+        box-shadow: 0 26px 90px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-radius: 28px;
+        padding: 20px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .logo {
+        display: grid;
+        width: 58px;
+        height: 58px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 18px;
+        background: linear-gradient(135deg, var(--gold), var(--gold-2));
+        color: #050505;
+        font-size: 32px;
+        font-weight: 950;
+        box-shadow: 0 14px 40px rgba(255, 210, 26, 0.18);
+      }
+
+      .eyebrow {
+        margin: 0 0 4px;
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(25px, 5vw, 38px);
+        line-height: 1.04;
+      }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .button {
+        min-height: 46px;
+        border-radius: 15px;
+        padding: 0 18px;
+        background: #24231d;
+        color: #f5f5f5;
+        font-weight: 900;
+        transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+        background: #302f27;
+      }
+
+      .button.primary {
+        background: linear-gradient(135deg, var(--gold), var(--gold-2));
+        color: #050505;
+      }
+
+      .button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        transform: none;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .card {
+        border-radius: 26px;
+        padding: 20px;
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .icon {
+        display: grid;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 15px;
+        background: rgba(255, 210, 26, 0.13);
+        color: var(--gold);
+        font-size: 22px;
+        font-weight: 950;
+      }
+
+      h2 {
+        font-size: 19px;
+        line-height: 1.1;
+      }
+
+      .drop {
+        display: grid;
+        place-items: center;
+        min-height: 220px;
+        border: 1px dashed rgba(255, 210, 26, 0.42);
+        border-radius: 22px;
+        background: rgba(255, 210, 26, 0.055);
+        padding: 24px;
+        text-align: center;
+        transition: background 0.16s ease, border-color 0.16s ease;
+      }
+
+      .drop:hover {
+        background: rgba(255, 210, 26, 0.09);
+        border-color: rgba(255, 210, 26, 0.75);
+      }
+
+      .drop input {
+        display: none;
+      }
+
+      .plus {
+        color: var(--gold);
+        font-size: 42px;
+        font-weight: 300;
+        line-height: 1;
+      }
+
+      .drop-title {
+        display: block;
+        margin-top: 10px;
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .drop-note {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .status {
+        margin-top: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.045);
+        padding: 13px 14px;
+        color: #e8e8e8;
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .status:empty {
+        display: none;
+      }
+
+      .fields {
+        display: grid;
+        gap: 18px;
+      }
+
+      .field {
+        display: grid;
+        gap: 10px;
+      }
+
+      .field-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .label {
+        color: #d8d8d8;
+        font-size: 14px;
+        font-weight: 950;
+      }
+
+      .pill {
+        border-radius: 999px;
+        background: rgba(255, 210, 26, 0.13);
+        padding: 5px 10px;
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--gold);
+      }
+
+      input[type="color"] {
+        width: 58px;
+        height: 38px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 11px;
+        background: #070707;
+        padding: 4px;
+      }
+
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .swatch {
+        width: 38px;
+        height: 38px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .swatch.active {
+        border-color: var(--gold);
+        box-shadow: 0 0 0 4px rgba(255, 210, 26, 0.17);
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        background: #0a0a0a;
+        padding: 14px;
+      }
+
+      .toggle input {
+        width: 22px;
+        height: 22px;
+        accent-color: var(--gold);
+      }
+
+      .save-line {
+        margin-top: 16px;
+        color: #777;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      @media (max-width: 820px) {
+        .page {
+          width: min(100% - 18px, 680px);
+          padding: 10px 0;
+        }
+
+        .hero {
+          align-items: stretch;
+          flex-direction: column;
+          border-radius: 22px;
+        }
+
+        .actions {
+          justify-content: stretch;
+        }
+
+        .actions .button,
+        .row .button {
+          flex: 1 1 auto;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div class="brand">
+          <div class="logo">T</div>
+          <div>
+            <p class="eyebrow">TextLens TV</p>
+            <h1>Subtitle overlay control</h1>
+            <p id="panelUrl" class="subtle">Connecting...</p>
+          </div>
+        </div>
+        <div class="actions">
+          <label class="toggle" style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 10px 14px; cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.08); margin: 0;">
+            <span class="label" style="font-size: 13px; font-weight: 950; margin-right: 8px;">Overlay Enabled</span>
+            <input id="overlayEnabledToggle" type="checkbox" />
+          </label>
+        </div>
+      </header>
+
+      <section class="grid">
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+          <article class="card">
+            <div class="card-head">
+              <div class="icon">↑</div>
+              <div>
+                <h2>Load translated SRT</h2>
+                <p id="subtitleSummary" class="subtle">Loading...</p>
+              </div>
+            </div>
+
+            <label class="drop">
+              <input id="srtInput" type="file" accept=".srt,text/plain" />
+              <span class="plus">+</span>
+              <span class="drop-title">Choose SRT file</span>
+              <span class="drop-note">Upload a translated subtitle file from this device.</span>
+            </label>
+
+            <div class="row">
+              <button id="readyButton" class="button primary" type="button" disabled>Ready</button>
+              <button id="clearSrt" class="button" type="button">Clear SRT</button>
+            </div>
+            <p id="message" class="status"></p>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div class="icon">📁</div>
+              <div>
+                <h2>Stored subtitles on TV</h2>
+                <p class="subtle">Auto-played when matching YouTube video plays.</p>
+              </div>
+            </div>
+            <div id="bindingsList" style="display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 4px;">
+              <p class="subtle" style="text-align: center; padding: 20px 0;">No subtitles stored yet.</p>
+            </div>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <div class="icon">Aa</div>
+            <div>
+              <h2>Overlay style</h2>
+              <p class="subtle">Changes apply live on the TV overlay.</p>
+            </div>
+          </div>
+
+          <div class="fields">
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Font size</span>
+                <span id="fontSizeValue" class="pill"></span>
+              </div>
+              <input id="fontSizeSp" type="range" min="12" max="72" step="1" />
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Text color</span>
+              </div>
+              <div id="textColorSwatches" class="swatches"></div>
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Background color</span>
+              </div>
+              <div id="backgroundColorSwatches" class="swatches"></div>
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Background opacity</span>
+                <span id="backgroundOpacityValue" class="pill"></span>
+              </div>
+              <input id="backgroundOpacity" type="range" min="0" max="100" step="1" />
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Horizontal position</span>
+                <span id="horizontalPercentValue" class="pill"></span>
+              </div>
+              <input id="horizontalPercent" type="range" min="0" max="100" step="1" />
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Bottom margin</span>
+                <span id="bottomMarginValue" class="pill"></span>
+              </div>
+              <input id="bottomMarginDp" type="range" min="0" max="220" step="1" />
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <span class="label">Max lines</span>
+                <span id="maxLinesValue" class="pill"></span>
+              </div>
+              <input id="maxLines" type="range" min="1" max="6" step="1" />
+            </div>
+
+            <label class="toggle">
+              <span class="label">Debug overlay</span>
+              <input id="debugEnabled" type="checkbox" />
+            </label>
+          </div>
+
+          <p id="saveState" class="save-line">Settings are stored on the TV.</p>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const presets = {
+        text: ["#FFD61E", "#FFFFFF", "#F8FAFC", "#38BDF8", "#4ADE80", "#FB7185"],
+        background: ["#000000", "#111827", "#1F2937", "#3F2F00", "#052E2B", "#3B0764"]
+      };
+
+      const defaults = {
+        fontSizeSp: 28,
+        textColor: "#FFD61E",
+        backgroundColor: "#000000",
+        backgroundOpacity: 62,
+        horizontalPercent: 50,
+        bottomMarginDp: 36,
+        maxLines: 3,
+        debugEnabled: false
+      };
+
+      const state = {
+        settings: { ...defaults },
+        savingTimer: null
+      };
+
+      const el = (id) => document.getElementById(id);
+
+      function normalizeColor(color) {
+        return String(color || "").toUpperCase();
+      }
+
+      function showMessage(text) {
+        el("message").textContent = text || "";
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(path, options);
+        const text = await response.text();
+        let json = {};
+        if (text) {
+          try {
+            json = JSON.parse(text);
+          } catch (_) {
+            throw new Error(text);
+          }
+        }
+        if (!response.ok) {
+          const detail = json.error || text || response.statusText || "Unknown error";
+          throw new Error(`${response.status} ${detail}`);
+        }
+        return json;
+      }
+
+      function renderSwatches(containerId, type, value) {
+        const container = el(containerId);
+        container.innerHTML = "";
+        presets[type].forEach((color) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "swatch" + (normalizeColor(value) === normalizeColor(color) ? " active" : "");
+          button.style.background = color;
+          button.setAttribute("aria-label", color);
+          button.addEventListener("click", () => updateSettings(type === "text" ? { textColor: color } : { backgroundColor: color }));
+          container.appendChild(button);
+        });
+
+        const picker = document.createElement("input");
+        picker.type = "color";
+        picker.value = value || (type === "text" ? defaults.textColor : defaults.backgroundColor);
+        picker.addEventListener("input", () => updateSettings(type === "text" ? { textColor: picker.value } : { backgroundColor: picker.value }));
+        container.appendChild(picker);
+      }
+
+      function renderSettings() {
+        const settings = state.settings;
+        el("fontSizeSp").value = settings.fontSizeSp;
+        el("fontSizeValue").textContent = `${Math.round(settings.fontSizeSp)}px`;
+        el("backgroundOpacity").value = settings.backgroundOpacity;
+        el("backgroundOpacityValue").textContent = `${settings.backgroundOpacity}%`;
+        el("horizontalPercent").value = settings.horizontalPercent;
+        el("horizontalPercentValue").textContent = `${Math.round(settings.horizontalPercent)}%`;
+        el("bottomMarginDp").value = settings.bottomMarginDp;
+        el("bottomMarginValue").textContent = `${settings.bottomMarginDp}dp`;
+        el("maxLines").value = settings.maxLines;
+        el("maxLinesValue").textContent = settings.maxLines;
+        el("debugEnabled").checked = !!settings.debugEnabled;
+        renderSwatches("textColorSwatches", "text", settings.textColor);
+        renderSwatches("backgroundColorSwatches", "background", settings.backgroundColor);
+      }
+
+      function renderBindingsList(bindings) {
+        const container = el("bindingsList");
+        if (!bindings || bindings.length === 0) {
+          container.innerHTML = `<p class="subtle" style="text-align: center; padding: 20px 0;">No subtitles stored yet.</p>`;
+          return;
+        }
+
+        container.innerHTML = "";
+        bindings.forEach(binding => {
+          const div = document.createElement("div");
+          div.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 14px;";
+          
+          const info = document.createElement("div");
+          info.style.cssText = "min-width: 0; flex: 1;";
+          
+          const title = document.createElement("p");
+          title.style.cssText = "font-weight: 800; font-size: 14px; margin: 0 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+          title.textContent = binding.mediaTitle || 'Unbound Subtitle';
+          
+          const file = document.createElement("p");
+          file.className = "subtle";
+          file.style.cssText = "font-size: 12px; margin: 0;";
+          file.textContent = binding.fileName;
+          
+          info.appendChild(title);
+          info.appendChild(file);
+          
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "button";
+          deleteBtn.style.cssText = "min-height: 32px; height: 32px; padding: 0 12px; font-size: 12px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #f87171;";
+          deleteBtn.type = "button";
+          deleteBtn.textContent = "Delete";
+          deleteBtn.addEventListener("click", () => deleteBinding(binding.fileName));
+          
+          div.appendChild(info);
+          div.appendChild(deleteBtn);
+          container.appendChild(div);
+        });
+      }
+
+      async function deleteBinding(fileName) {
+        if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return;
+        try {
+          await api("/api/subtitle/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: fileName })
+          });
+          await refresh();
+        } catch (error) {
+          showMessage(error.message || "Could not delete subtitle.");
+        }
+      }
+
+      async function refresh() {
+        try {
+          const data = await api("/api/state");
+          state.settings = { ...defaults, ...(data.settings || {}) };
+          el("panelUrl").textContent = data.panelUrl || "";
+          el("subtitleSummary").textContent = data.hasSubtitle
+            ? `${data.subtitleName || "subtitle.srt"} · ${data.cueCount || 0} cues`
+            : "No SRT loaded";
+          el("overlayEnabledToggle").checked = !!data.overlayEnabled;
+          renderSettings();
+          renderBindingsList(data.storedBindings || []);
+        } catch (error) {
+          showMessage(error.message || "Could not connect to the TV panel server.");
+        }
+      }
+
+      async function saveSettingsNow(next) {
+        state.settings = { ...state.settings, ...next };
+        renderSettings();
+        el("saveState").textContent = "Saving...";
+        try {
+          await api("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state.settings)
+          });
+          el("saveState").textContent = "Settings saved.";
+        } catch (error) {
+          el("saveState").textContent = error.message || "Could not save settings.";
+        }
+      }
+
+      function updateSettings(patch) {
+        window.clearTimeout(state.savingTimer);
+        state.settings = { ...state.settings, ...patch };
+        renderSettings();
+        state.savingTimer = window.setTimeout(() => saveSettingsNow({}), 180);
+      }
+
+      async function uploadSrt(file) {
+        if (!file) return;
+        el("readyButton").textContent = "Loading...";
+        showMessage("");
+        try {
+          const content = await file.text();
+          const result = await api("/api/subtitle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: file.name, content })
+          });
+          showMessage(`Loaded ${result.cueCount || 0} cues.`);
+          await refresh();
+        } catch (error) {
+          showMessage(error.message || "Could not upload SRT.");
+        } finally {
+          el("readyButton").textContent = "Ready";
+        }
+      }
+
+      function bind() {
+        el("overlayEnabledToggle").addEventListener("change", async (event) => {
+          const enabled = event.target.checked;
+          try {
+            if (enabled) {
+              await api("/api/overlay/show", { method: "POST" });
+            } else {
+              await api("/api/overlay/hide", { method: "POST" });
+            }
+            await refresh();
+          } catch (error) {
+            showMessage(error.message);
+            event.target.checked = !enabled;
+          }
+        });
+        el("clearSrt").addEventListener("click", async () => {
+          try {
+            await api("/api/subtitle/clear", { method: "POST" });
+            showMessage("SRT cleared.");
+            await refresh();
+          } catch (error) {
+            showMessage(error.message);
+          }
+        });
+        el("srtInput").addEventListener("change", (event) => uploadSrt(event.target.files && event.target.files[0]));
+
+        ["fontSizeSp", "backgroundOpacity", "horizontalPercent", "bottomMarginDp", "maxLines"].forEach((id) => {
+          el(id).addEventListener("input", (event) => updateSettings({ [id]: Number(event.target.value) }));
+        });
+        el("debugEnabled").addEventListener("change", (event) => updateSettings({ debugEnabled: event.target.checked }));
+      }
+
+      bind();
+      refresh();
+      window.setInterval(refresh, 3000);
+    </script>
+  </body>
+</html>
