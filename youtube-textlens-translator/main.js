@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const { getSubtitles, getVideoDetails } = require('youtube-caption-extractor');
 
 // Helper function to extract YouTube video ID from URL
@@ -58,6 +58,91 @@ function subtitlesToSrt(subtitles) {
     .join('\n\n') + '\n';
 }
 
+// Promisified command runner
+function runCommand(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        const err = new Error(stderr.trim() || `${command} exited with ${code}`);
+        err.code = code;
+        reject(err);
+      }
+    });
+  });
+}
+
+// Check if file path exists
+async function pathExists(filePath) {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Main function to extract subtitles using yt-dlp
+async function extractWithYtDlp(url, lang = 'en', useCookies = false) {
+  const videoID = extractVideoId(url);
+  const tempDir = app.getPath('temp');
+  const outputBase = path.join(tempDir, `yt-sub-${Date.now()}-${videoID}`);
+  const expectedLanguageFile = `${outputBase}.${lang}.srt`;
+  const fallbackFile = `${outputBase}.srt`;
+  
+  const ytDlpArgs = [
+    '--no-update',
+    '--ignore-no-formats',
+    '--skip-download',
+    '--write-subs',
+    '--write-auto-subs',
+    '--sub-langs',
+    lang,
+    '--sub-format',
+    'srt/best',
+    '--convert-subs',
+    'srt',
+    '-o',
+    outputBase,
+    url
+  ];
+  
+  if (useCookies) {
+    ytDlpArgs.push('--cookies-from-browser', 'chrome');
+  }
+  
+  // Use Brew-installed path, or fallback to system path
+  const ytDlpPath = '/opt/homebrew/bin/yt-dlp';
+  
+  await runCommand(ytDlpPath, ytDlpArgs);
+  
+  const generatedPath = await pathExists(expectedLanguageFile)
+    ? expectedLanguageFile
+    : await pathExists(fallbackFile)
+      ? fallbackFile
+      : '';
+      
+  if (!generatedPath) {
+    throw new Error('yt-dlp did not produce an SRT file.');
+  }
+  
+  const content = fs.readFileSync(generatedPath, 'utf-8');
+  
+  // Clean up
+  try {
+    fs.unlinkSync(generatedPath);
+  } catch (e) {}
+  
+  return content;
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 950,
@@ -103,30 +188,48 @@ app.whenReady().then(() => {
     });
   });
 
-  // 2. Extract YouTube Subtitles
+  // 2. Extract YouTube Subtitles (with fallback mechanisms)
   ipcMain.handle('extract-youtube-subtitles', async (event, { url, lang = 'en' }) => {
     const videoID = extractVideoId(url);
     if (!videoID) {
       throw new Error('Invalid YouTube URL or Video ID');
     }
     
+    // Retrieve title if possible
+    let title = videoID;
     try {
-      const [subtitles, details] = await Promise.all([
-        getSubtitles({ videoID, lang }),
-        getVideoDetails({ videoID, lang }).catch(() => ({ title: videoID }))
-      ]);
-      
-      if (!subtitles || !subtitles.length) {
-        throw new Error(`No English subtitles found for YouTube video ${videoID}.`);
+      const details = await getVideoDetails({ videoID, lang }).catch(() => ({ title: videoID }));
+      if (details && details.title) {
+        title = details.title;
       }
+    } catch (e) {}
+
+    // Method 1: Try yt-dlp without cookies
+    try {
+      const srtContent = await extractWithYtDlp(url, lang, false);
+      return { title, content: srtContent };
+    } catch (e1) {
+      console.warn('yt-dlp without cookies failed, trying with Chrome cookies...', e1.message);
       
-      const srtContent = subtitlesToSrt(subtitles);
-      return {
-        title: details.title || videoID,
-        content: srtContent
-      };
-    } catch (error) {
-      throw new Error(error.message || 'Failed to extract YouTube captions.');
+      // Method 2: Try yt-dlp with Chrome cookies to bypass bot check
+      try {
+        const srtContent = await extractWithYtDlp(url, lang, true);
+        return { title, content: srtContent };
+      } catch (e2) {
+        console.warn('yt-dlp with Chrome cookies failed, falling back to youtube-caption-extractor...', e2.message);
+        
+        // Method 3: Fallback to fetch-based youtube-caption-extractor
+        try {
+          const subtitles = await getSubtitles({ videoID, lang });
+          if (!subtitles || !subtitles.length) {
+            throw new Error(`No subtitles found with lang=${lang}.`);
+          }
+          const srtContent = subtitlesToSrt(subtitles);
+          return { title, content: srtContent };
+        } catch (e3) {
+          throw new Error(`Failed to extract subtitles.\nMethod 1 (yt-dlp): ${e1.message}\nMethod 2 (yt-dlp with cookies): ${e2.message}\nMethod 3 (API scraper): ${e3.message}`);
+        }
+      }
     }
   });
 
