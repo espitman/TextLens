@@ -5,27 +5,46 @@
  * Each block: { index: number, time: string, text: string }
  */
 function parseSRT(content) {
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const rawBlocks = normalized.trim().split(/\n\n+/);
-  
+  // Normalize line endings
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const blocks = [];
-  for (const raw of rawBlocks) {
-    const lines = raw.split('\n');
-    if (lines.length >= 3) {
-      const indexStr = lines[0].trim();
-      const timeLine = lines[1].trim();
-      const textLine = lines.slice(2).join(' ').trim();
-      
-      const index = parseInt(indexStr, 10);
-      if (!isNaN(index) && timeLine.includes('-->')) {
-        blocks.append = blocks.push({
-          index,
-          time: timeLine,
-          text: textLine
+  let currentBlock = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Check if line is a number (starts a new block)
+    if (/^\d+$/.test(line)) {
+      if (currentBlock && currentBlock.time) {
+        blocks.push({
+          index: currentBlock.index,
+          time: currentBlock.time,
+          text: currentBlock.textLines.join(' ').trim()
         });
+      }
+      currentBlock = {
+        index: parseInt(line, 10),
+        time: '',
+        textLines: []
+      };
+    } else if (currentBlock && line.includes('-->')) {
+      currentBlock.time = line;
+    } else if (currentBlock && currentBlock.time) {
+      if (line !== '') {
+        currentBlock.textLines.push(line);
       }
     }
   }
+  
+  // Push the final block
+  if (currentBlock && currentBlock.time) {
+    blocks.push({
+      index: currentBlock.index,
+      time: currentBlock.time,
+      text: currentBlock.textLines.join(' ').trim()
+    });
+  }
+  
   return blocks;
 }
 

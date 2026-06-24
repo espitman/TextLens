@@ -53,10 +53,10 @@ const modelsMap = {
     { value: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', inputPrice: 3.00, outputPrice: 15.00 }
   ],
   liara: [
-    { value: 'openai/gpt-5-nano', name: 'GPT 5 Nano (Default)', inputPrice: 0.075, outputPrice: 0.30 },
-    { value: 'openai/gpt-4.1-mini', name: 'GPT 4.1 Mini', inputPrice: 0.15, outputPrice: 0.60 },
-    { value: 'google/gemma-3-27b-it', name: 'Gemma 3 27B', inputPrice: 0.10, outputPrice: 0.40 },
-    { value: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', inputPrice: 0.075, outputPrice: 0.30 }
+    { value: 'openai/gpt-5-nano', name: 'GPT 5 Nano (Default)', inputPrice: 5000, outputPrice: 20000 },
+    { value: 'openai/gpt-4.1-mini', name: 'GPT 4.1 Mini', inputPrice: 10000, outputPrice: 40000 },
+    { value: 'google/gemma-3-27b-it', name: 'Gemma 3 27B', inputPrice: 6500, outputPrice: 26000 },
+    { value: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', inputPrice: 5000, outputPrice: 20000 }
   ]
 };
 
@@ -194,10 +194,20 @@ function updateFileInfo() {
       const outputCost = (estOutputTokens / 1000000) * modelInfo.outputPrice;
       const totalCost = inputCost + outputCost;
       
-      if (totalCost < 0.0001) {
-        costText = '< $0.0001';
+      if (provider === 'liara') {
+        // Liara prices are in Tomans (تومان)
+        if (totalCost < 1) {
+          costText = '< ۱ تومان';
+        } else {
+          costText = `${Math.ceil(totalCost).toLocaleString('fa-IR')} تومان`;
+        }
       } else {
-        costText = `$${totalCost.toFixed(4)}`;
+        // OpenRouter is in USD ($)
+        if (totalCost < 0.0001) {
+          costText = '< $0.0001';
+        } else {
+          costText = `$${totalCost.toFixed(4)}`;
+        }
       }
     }
   } else {
