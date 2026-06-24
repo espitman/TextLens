@@ -116,6 +116,22 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             addView(subtitleView)
+            
+            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                if (visibility == View.VISIBLE && width > 0 && height > 0) {
+                    val currentSettings = store.loadSettings()
+                    val screenWidth = resources.displayMetrics.widthPixels
+                    val targetX = (screenWidth * (currentSettings.horizontalPercent / 100f)) - (width / 2f)
+                    val targetY = (resources.displayMetrics.heightPixels - height - dp(currentSettings.bottomMarginDp))
+                        .coerceAtLeast(0)
+                        .toFloat()
+                    
+                    if (x != targetX || y != targetY) {
+                        x = targetX.coerceIn(0f, (screenWidth - width).coerceAtLeast(0).toFloat())
+                        y = targetY
+                    }
+                }
+            }
         }
         val root = FrameLayout(this).apply {
             addView(
@@ -249,13 +265,45 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
             val playingTitle = controller.mediaTitle()
             if (playingTitle.isNotBlank()) {
                 val allBindings = store.loadAllBindings()
-                val matched = allBindings.firstOrNull { it.mediaTitle.looksLikeSameVideoAs(playingTitle) }
+                val matched = allBindings
+                    .filter { it.mediaTitle.looksLikeSameVideoAs(playingTitle) }
+                    .sortedWith(
+                        compareByDescending<SubtitleBinding> { 
+                            val nameLower = it.fileName.lowercase(Locale.US)
+                            nameLower.contains("fa") || nameLower.contains("persian") || nameLower.contains("farsi")
+                        }.thenBy { 
+                            val nameLower = it.fileName.lowercase(Locale.US)
+                            if (nameLower.contains("english") || nameLower.contains("auto-generated")) 1 else 0
+                        }
+                    )
+                    .firstOrNull()
                 if (matched != null) {
                     val currentActiveName = store.loadSubtitleName()
-                    if (currentActiveName != matched.fileName) {
-                        store.setActiveSubtitle(matched.fileName)
+                    val currentBinding = store.loadSubtitleBinding()
+                    val playingDuration = controller.mediaDurationMs()
+                    
+                    val titleChanged = matched.mediaTitle != playingTitle
+                    val durationChanged = matched.mediaDurationMs == 0L && playingDuration > 0L
+                    
+                    val bindingToUse = if (titleChanged || durationChanged) {
+                        val updated = SubtitleBinding(
+                            fileName = matched.fileName,
+                            mediaTitle = playingTitle,
+                            mediaDurationMs = if (playingDuration > 0L) playingDuration else matched.mediaDurationMs,
+                            subtitleDurationMs = matched.subtitleDurationMs,
+                            createdAtMs = matched.createdAtMs
+                        )
+                        store.addOrUpdateBinding(updated)
+                        updated
+                    } else {
+                        matched
+                    }
+
+                    if (currentActiveName != bindingToUse.fileName || currentBinding == null || currentBinding.mediaTitle != bindingToUse.mediaTitle || currentBinding.mediaDurationMs != bindingToUse.mediaDurationMs) {
+                        store.setActiveSubtitle(bindingToUse.fileName)
                         cachedSubtitleVersion = Long.MIN_VALUE
                     }
+
                     if (!overlayVisible) {
                         showOverlayOnMain()
                         wasAutoShown = true
@@ -331,15 +379,7 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
         container.setBackgroundColor(background)
         container.setPadding(dp(18), dp(7), dp(18), dp(9))
 
-        root.post {
-            val screenWidth = resources.displayMetrics.widthPixels
-            val targetX = (screenWidth * (settings.horizontalPercent / 100f)) - (container.width / 2f)
-            container.x = targetX.coerceIn(0f, (screenWidth - container.width).coerceAtLeast(0).toFloat())
-            container.y = (resources.displayMetrics.heightPixels - container.height - dp(settings.bottomMarginDp))
-                .coerceAtLeast(0)
-                .toFloat()
-        }
-
+        container.requestLayout()
         lastSettings = settings
     }
 

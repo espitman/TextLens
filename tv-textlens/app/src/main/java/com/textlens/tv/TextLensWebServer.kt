@@ -93,6 +93,7 @@ class TextLensWebServer(
                         val payload = JSONObject(call.receiveText())
                         val name = payload.optString("name", "subtitle.srt").ifBlank { "subtitle.srt" }
                         val content = payload.optString("content", "")
+                        val clientYoutubeTitle = payload.optString("youtubeTitle", "")
                         val cues = parseSrt(content)
                         val cueCount = cues.size
                         if (cueCount == 0) {
@@ -102,14 +103,48 @@ class TextLensWebServer(
                         val subtitleDurationMs = cues.lastOrNull()?.endMs ?: 0L
                         val videoId = extractVideoId(name)
                         var binding: SubtitleBinding? = null
-                        if (videoId != null) {
+
+                        if (clientYoutubeTitle.isNotBlank()) {
+                            binding = SubtitleBinding(
+                                fileName = name,
+                                mediaTitle = clientYoutubeTitle,
+                                mediaDurationMs = 0L,
+                                subtitleDurationMs = subtitleDurationMs,
+                                createdAtMs = System.currentTimeMillis()
+                            )
+                        } else if (videoId != null) {
                             val title = withContext(Dispatchers.IO) {
                                 fetchYoutubeTitle(videoId)
                             }
-                            if (title != null) {
+                            val titleToUse = title ?: name
+                                .substringBeforeLast(".")
+                                .replace(Regex("[_-]fa$|[_-]fa[_-]", RegexOption.IGNORE_CASE), "")
+                                .replace(Regex("[_-]"), " ")
+                                .trim()
+
+                            binding = SubtitleBinding(
+                                fileName = name,
+                                mediaTitle = titleToUse,
+                                mediaDurationMs = 0L,
+                                subtitleDurationMs = subtitleDurationMs,
+                                createdAtMs = System.currentTimeMillis()
+                            )
+                        } else {
+                            binding = callbacks.currentSubtitleBinding(name, subtitleDurationMs)
+                            if (binding == null) {
+                                val cleanTitle = name
+                                    .substringBeforeLast(".")
+                                    .replace(Regex("[_-]fa$|[_-]fa[_-]", RegexOption.IGNORE_CASE), "")
+                                    .replace(Regex("[_-]"), " ")
+                                    .replace(Regex("\\[[^\\]]*]"), "")
+                                    .replace(Regex("\\([^)]*\\)"), "")
+                                    .trim()
+                                    .replace(Regex("\\s+"), " ")
+
+                                val titleToUse = if (cleanTitle.isBlank()) "Uploaded Subtitle" else cleanTitle
                                 binding = SubtitleBinding(
                                     fileName = name,
-                                    mediaTitle = title,
+                                    mediaTitle = titleToUse,
                                     mediaDurationMs = 0L,
                                     subtitleDurationMs = subtitleDurationMs,
                                     createdAtMs = System.currentTimeMillis()
@@ -117,14 +152,8 @@ class TextLensWebServer(
                             }
                         }
 
-                        if (binding == null) {
-                            binding = callbacks.currentSubtitleBinding(name, subtitleDurationMs)
-                        }
-
                         store.saveSubtitleFile(name, content)
-                        if (binding != null) {
-                            store.addOrUpdateBinding(binding)
-                        }
+                        store.addOrUpdateBinding(binding!!)
                         store.saveSubtitle(name, content, binding)
                         callbacks.notifySettingsChanged()
 
@@ -132,7 +161,7 @@ class TextLensWebServer(
                             .put("ok", true)
                             .put("name", name)
                             .put("cueCount", cueCount)
-                            .put("binding", binding?.toJson())
+                            .put("binding", binding.toJson())
                     }
                 }
 

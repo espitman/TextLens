@@ -676,16 +676,47 @@
         state.savingTimer = window.setTimeout(() => saveSettingsNow({}), 180);
       }
 
+      function extractVideoId(name) {
+        const regex = /([a-zA-Z0-9_-]{11})/;
+        const match = regex.exec(name);
+        return match ? match[1] : null;
+      }
+
+      async function fetchYoutubeTitleClient(videoId) {
+        try {
+          const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+          const json = await res.json();
+          if (json && json.title) return json.title;
+        } catch (e) {
+          console.log("noembed failed", e);
+        }
+        try {
+          const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+          const json = await res.json();
+          if (json && json.title) return json.title;
+        } catch (e) {
+          console.log("youtube oembed failed", e);
+        }
+        return null;
+      }
+
       async function uploadSrt(file) {
         if (!file) return;
         el("readyButton").textContent = "Loading...";
         showMessage("");
         try {
           const content = await file.text();
+          
+          let youtubeTitle = "";
+          const videoId = extractVideoId(file.name);
+          if (videoId) {
+            youtubeTitle = await fetchYoutubeTitleClient(videoId) || "";
+          }
+
           const result = await api("/api/subtitle", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: file.name, content })
+            body: JSON.stringify({ name: file.name, content, youtubeTitle })
           });
           showMessage(`Loaded ${result.cueCount || 0} cues.`);
           await refresh();

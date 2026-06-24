@@ -8,6 +8,8 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
 import android.util.StateSet
@@ -27,6 +29,30 @@ class MainActivity : Activity() {
     private var waitingForNotificationPermission = false
     private lateinit var store: TextLensStore
 
+    private var overlayBadge: View? = null
+    private var overlayBadgeDot: View? = null
+    private var overlayBadgeText: TextView? = null
+
+    private var mediaBadge: View? = null
+    private var mediaBadgeDot: View? = null
+    private var mediaBadgeText: TextView? = null
+
+    private var listContainer: LinearLayout? = null
+
+    private var cachedOverlayEnabled: Boolean? = null
+    private var cachedOverlayPermission: Boolean? = null
+    private var cachedMediaPermission: Boolean? = null
+    private var cachedBindingsList: List<SubtitleBinding>? = null
+
+    private val uiRefreshHandler = Handler(Looper.getMainLooper())
+    private val uiRefreshRunnable = object : Runnable {
+        override fun run() {
+            updateStatusBadges()
+            updateStoredSubtitlesList()
+            uiRefreshHandler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         store = TextLensStore(this)
@@ -35,7 +61,15 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        cachedOverlayEnabled = null
+        cachedOverlayPermission = null
+        cachedMediaPermission = null
+        cachedBindingsList = null
+
         setContentView(makeContentView())
+        updateStatusBadges()
+        updateStoredSubtitlesList()
+
         if (isNotificationListenerEnabled()) {
             YoutubeNotificationListener.requestReconnect(this)
         }
@@ -47,6 +81,12 @@ class MainActivity : Activity() {
             waitingForNotificationPermission = false
             showOverlay()
         }
+        uiRefreshHandler.post(uiRefreshRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        uiRefreshHandler.removeCallbacks(uiRefreshRunnable)
     }
 
     private fun dp(value: Int): Int {
@@ -107,7 +147,7 @@ class MainActivity : Activity() {
                 intArrayOf(Color.parseColor("#050505"), Color.parseColor("#15130b"))
             )
             background = bg
-            setPadding(dp(48), dp(36), dp(48), dp(36))
+            setPadding(dp(32), dp(20), dp(32), dp(20))
         }
 
         // --- HEADER ROW ---
@@ -134,28 +174,29 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        val overlayGranted = Settings.canDrawOverlays(this)
-        val overlayBadge = makeStatusBadge(
-            text = if (overlayGranted) "Overlay: Active" else "Overlay: Required",
-            isActive = overlayGranted
-        )
-        badgesContainer.addView(overlayBadge)
+        val overlayBadgeView = createStatusBadgeView()
+        overlayBadge = overlayBadgeView
+        overlayBadgeDot = (overlayBadgeView as LinearLayout).getChildAt(0)
+        overlayBadgeText = overlayBadgeView.getChildAt(1) as TextView
+        badgesContainer.addView(overlayBadgeView)
 
-        val mediaGranted = isNotificationListenerEnabled()
-        val mediaBadge = makeStatusBadge(
-            text = if (mediaGranted) "Media Access: Active" else "Media: Required",
-            isActive = mediaGranted
+        val mediaBadgeView = createStatusBadgeView()
+        mediaBadge = mediaBadgeView
+        mediaBadgeDot = (mediaBadgeView as LinearLayout).getChildAt(0)
+        mediaBadgeText = mediaBadgeView.getChildAt(1) as TextView
+        val mediaBadgeParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply {
-            val params = layoutParams as LinearLayout.LayoutParams
-            params.leftMargin = dp(12)
+            leftMargin = dp(12)
         }
-        badgesContainer.addView(mediaBadge)
+        badgesContainer.addView(mediaBadgeView, mediaBadgeParams)
 
         headerRow.addView(badgesContainer)
         rootLayout.addView(headerRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         val headerContentSpacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(1, dp(28))
+            layoutParams = LinearLayout.LayoutParams(1, dp(20))
         }
         rootLayout.addView(headerContentSpacer)
 
@@ -170,7 +211,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
             background = makeCardDrawable("#12110c", "#2a2615", 20f)
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+            setPadding(dp(20), dp(16), dp(20), dp(16))
         }
 
         val leftTitle = TextView(this).apply {
@@ -185,15 +226,15 @@ class MainActivity : Activity() {
         val qrContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(180)).apply {
-                topMargin = dp(16)
-                bottomMargin = dp(16)
+            val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(140)).apply {
+                topMargin = dp(12)
+                bottomMargin = dp(12)
             }
             layoutParams = params
         }
 
         val qrImageView = ImageView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(160), dp(160))
+            layoutParams = LinearLayout.LayoutParams(dp(120), dp(120))
             background = makeCardDrawable("#1c1b14", "#3a351b", 12f)
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
@@ -205,14 +246,14 @@ class MainActivity : Activity() {
 
         urlText = TextView(this).apply {
             text = panelUrl
-            textSize = 20f
+            textSize = 17f
             setTextColor(Color.parseColor("#f5c84a"))
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(12), dp(8), dp(12), dp(8))
             background = makeCardDrawable("#1c1b14", "#ffd21a", 12f)
         }
         leftColumn.addView(urlText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            bottomMargin = dp(16)
+            bottomMargin = dp(12)
         })
 
         val leftHint = TextView(this).apply {
@@ -223,36 +264,51 @@ class MainActivity : Activity() {
         }
         leftColumn.addView(leftHint)
 
-        val actionButtonsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
+        val actionButtonsLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
             val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(20)
+                topMargin = dp(12)
             }
             layoutParams = params
         }
 
-        val showButton = Button(this).apply {
+        val row1 = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
+        val showButton = TextView(this).apply {
             text = "Show Overlay"
-            textSize = 14f
+            textSize = 13f
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
             background = makeFocusableButtonDrawable()
             setTextColor(Color.parseColor("#f7f0dc"))
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
             isFocusable = true
+            isClickable = true
             setOnFocusChangeListener { _, hasFocus ->
                 setTextColor(if (hasFocus) Color.parseColor("#050505") else Color.parseColor("#f7f0dc"))
             }
             setOnClickListener { requestPermissionsThenShowOverlay() }
         }
-        actionButtonsRow.addView(showButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT).apply { weight = 1f })
+        row1.addView(showButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            weight = 1f
+        })
 
-        val hideButton = Button(this).apply {
+        val hideButton = TextView(this).apply {
             text = "Hide Overlay"
-            textSize = 14f
+            textSize = 13f
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
             background = makeFocusableButtonDrawable()
             setTextColor(Color.parseColor("#f7f0dc"))
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
             isFocusable = true
+            isClickable = true
             setOnFocusChangeListener { _, hasFocus ->
                 setTextColor(if (hasFocus) Color.parseColor("#050505") else Color.parseColor("#f7f0dc"))
             }
@@ -263,29 +319,34 @@ class MainActivity : Activity() {
                 )
             }
         }
-        actionButtonsRow.addView(hideButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+        row1.addView(hideButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             weight = 1f
             leftMargin = dp(8)
         })
 
-        val mediaButton = Button(this).apply {
-            text = "Media Access"
-            textSize = 14f
+        actionButtonsLayout.addView(row1, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val mediaButton = TextView(this).apply {
+            text = "Media Access Settings"
+            textSize = 13f
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
             background = makeFocusableButtonDrawable()
             setTextColor(Color.parseColor("#f7f0dc"))
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             isFocusable = true
+            isClickable = true
             setOnFocusChangeListener { _, hasFocus ->
                 setTextColor(if (hasFocus) Color.parseColor("#050505") else Color.parseColor("#f7f0dc"))
             }
             setOnClickListener { openNotificationListenerSettings() }
         }
-        actionButtonsRow.addView(mediaButton, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            weight = 1f
-            leftMargin = dp(8)
+        actionButtonsLayout.addView(mediaButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(8)
         })
 
-        leftColumn.addView(actionButtonsRow)
+        leftColumn.addView(actionButtonsLayout)
 
         columnsLayout.addView(leftColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT).apply {
             weight = 1f
@@ -321,12 +382,114 @@ class MainActivity : Activity() {
             layoutParams = params
         }
 
-        val listContainer = LinearLayout(this).apply {
+        val listContainerView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP
         }
+        listContainer = listContainerView
 
+        scrollView.addView(listContainerView)
+        rightColumn.addView(scrollView)
+
+        columnsLayout.addView(rightColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+            weight = 1f
+        })
+
+        rootLayout.addView(columnsLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply {
+            weight = 1f
+        })
+
+        return rootLayout
+    }
+
+    private fun extractVideoId(name: String): String? {
+        val regex = Regex("([a-zA-Z0-9_-]{11})")
+        val match = regex.find(name)
+        return match?.groupValues?.get(1)
+    }
+
+    private fun createStatusBadgeView(): View {
+        val badge = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(5), dp(10), dp(5))
+        }
+
+        val dot = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(8), dp(8))
+        }
+        badge.addView(dot)
+
+        val badgeText = TextView(this).apply {
+            textSize = 11f
+            setPadding(dp(6), 0, 0, 0)
+        }
+        badge.addView(badgeText)
+
+        return badge
+    }
+
+    private fun updateStatusBadges() {
+        val overlayGranted = Settings.canDrawOverlays(this)
+        val overlayEnabled = store.isOverlayEnabled() && overlayGranted
+        val mediaGranted = isNotificationListenerEnabled()
+
+        if (overlayEnabled != cachedOverlayEnabled || overlayGranted != cachedOverlayPermission) {
+            cachedOverlayEnabled = overlayEnabled
+            cachedOverlayPermission = overlayGranted
+            
+            val text = if (!overlayGranted) "Overlay: Required" else if (overlayEnabled) "Overlay: Enabled" else "Overlay: Disabled"
+            val isActive = overlayEnabled
+            
+            overlayBadge?.background = makeCardDrawable(
+                if (isActive) "#0a2615" else "#2c0e0e",
+                if (isActive) "#116035" else "#651717",
+                8f
+            )
+            val dotColor = if (isActive) "#31be60" else "#ef4444"
+            overlayBadgeDot?.background = GradientDrawable().apply {
+                setColor(Color.parseColor(dotColor))
+                cornerRadius = dp(4).toFloat()
+            }
+            overlayBadgeText?.text = text
+            overlayBadgeText?.setTextColor(if (isActive) Color.parseColor("#a7f3d0") else Color.parseColor("#fca5a5"))
+        }
+
+        if (mediaGranted != cachedMediaPermission) {
+            cachedMediaPermission = mediaGranted
+            
+            val text = if (mediaGranted) "Media Access: Active" else "Media: Required"
+            val isActive = mediaGranted
+            
+            mediaBadge?.background = makeCardDrawable(
+                if (isActive) "#0a2615" else "#2c0e0e",
+                if (isActive) "#116035" else "#651717",
+                8f
+            )
+            val dotColor = if (isActive) "#31be60" else "#ef4444"
+            mediaBadgeDot?.background = GradientDrawable().apply {
+                setColor(Color.parseColor(dotColor))
+                cornerRadius = dp(4).toFloat()
+            }
+            mediaBadgeText?.text = text
+            mediaBadgeText?.setTextColor(if (isActive) Color.parseColor("#a7f3d0") else Color.parseColor("#fca5a5"))
+        }
+    }
+
+    private fun updateStoredSubtitlesList() {
         val allBindings = store.loadAllBindings()
+        val hasChanged = cachedBindingsList == null ||
+                allBindings.size != cachedBindingsList?.size ||
+                allBindings.zip(cachedBindingsList!!).any { (a, b) ->
+                    a.fileName != b.fileName || a.mediaTitle != b.mediaTitle
+                }
+
+        if (!hasChanged) return
+        cachedBindingsList = allBindings
+
+        val container = listContainer ?: return
+        container.removeAllViews()
+
         if (allBindings.isEmpty()) {
             val emptyText = TextView(this).apply {
                 text = "No subtitles stored on the TV yet.\nUpload srt files through the web panel."
@@ -335,7 +498,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(48), dp(24), dp(48))
             }
-            listContainer.addView(emptyText)
+            container.addView(emptyText)
         } else {
             for (binding in allBindings) {
                 val row = LinearLayout(this).apply {
@@ -374,13 +537,15 @@ class MainActivity : Activity() {
                     weight = 1f
                 })
 
-                val playButton = Button(this).apply {
+                val playButton = TextView(this).apply {
                     text = "Play"
                     textSize = 13f
+                    gravity = Gravity.CENTER
                     background = makeFocusableButtonDrawable()
                     setTextColor(Color.parseColor("#f7f0dc"))
                     setPadding(dp(16), dp(8), dp(16), dp(8))
                     isFocusable = true
+                    isClickable = true
                     setOnFocusChangeListener { _, hasFocus ->
                         setTextColor(if (hasFocus) Color.parseColor("#050505") else Color.parseColor("#f7f0dc"))
                     }
@@ -398,63 +563,11 @@ class MainActivity : Activity() {
                     leftMargin = dp(12)
                 })
 
-                listContainer.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                container.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     bottomMargin = dp(8)
                 })
             }
         }
-
-        scrollView.addView(listContainer)
-        rightColumn.addView(scrollView)
-
-        columnsLayout.addView(rightColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT).apply {
-            weight = 1f
-        })
-
-        rootLayout.addView(columnsLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0).apply {
-            weight = 1f
-        })
-
-        return rootLayout
-    }
-
-    private fun extractVideoId(name: String): String? {
-        val regex = Regex("([a-zA-Z0-9_-]{11})")
-        val match = regex.find(name)
-        return match?.groupValues?.get(1)
-    }
-
-    private fun makeStatusBadge(text: String, isActive: Boolean): View {
-        val badge = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = makeCardDrawable(
-                if (isActive) "#0a2615" else "#2c0e0e",
-                if (isActive) "#116035" else "#651717",
-                8f
-            )
-            setPadding(dp(10), dp(5), dp(10), dp(5))
-        }
-
-        val dot = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(8), dp(8))
-            val dotColor = if (isActive) "#31be60" else "#ef4444"
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor(dotColor))
-                cornerRadius = dp(4).toFloat()
-            }
-        }
-        badge.addView(dot)
-
-        val badgeText = TextView(this).apply {
-            this.text = text
-            textSize = 11f
-            setTextColor(if (isActive) Color.parseColor("#a7f3d0") else Color.parseColor("#fca5a5"))
-            setPadding(dp(6), 0, 0, 0)
-        }
-        badge.addView(badgeText)
-
-        return badge
     }
 
     private fun requestPermissionsThenShowOverlay() {
