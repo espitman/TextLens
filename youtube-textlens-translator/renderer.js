@@ -10,8 +10,10 @@ const concurrencySlider = document.getElementById('concurrency-slider');
 const concurrencyVal = document.getElementById('concurrency-val');
 
 const tabYt = document.getElementById('tab-yt');
+const tabSubtitleTo = document.getElementById('tab-subtitleto');
 const tabFile = document.getElementById('tab-file');
 const viewYt = document.getElementById('view-yt');
+const viewSubtitleTo = document.getElementById('view-subtitleto');
 const viewUpload = document.getElementById('view-upload');
 const viewTranslate = document.getElementById('view-translate');
 const dropZone = document.getElementById('drop-zone');
@@ -20,6 +22,12 @@ const browseBtn = document.getElementById('browse-btn');
 const ytUrlInput = document.getElementById('yt-url');
 const ytFetchBtn = document.getElementById('yt-fetch-btn');
 const ytLangSelect = document.getElementById('yt-lang');
+const subtitleToUrlInput = document.getElementById('subtitleto-url');
+const subtitleToOpenBtn = document.getElementById('subtitleto-open-btn');
+const subtitleToClickSrtBtn = document.getElementById('subtitleto-click-srt-btn');
+const subtitleToStatus = document.getElementById('subtitleto-status');
+const subtitleToWebview = document.getElementById('subtitleto-webview');
+const subtitleToEmpty = document.getElementById('subtitleto-empty');
 
 const loadedFileName = document.getElementById('loaded-file-name');
 const loadedFileInfo = document.getElementById('loaded-file-info');
@@ -229,6 +237,7 @@ function setLoadedFile(file) {
   // Transition to Translation view
   viewUpload.classList.remove('active');
   viewYt.classList.remove('active');
+  viewSubtitleTo.classList.remove('active');
   viewTranslate.classList.add('active');
   
   // Reset logs and success states
@@ -457,18 +466,114 @@ saveBtn.addEventListener('click', async () => {
 });
 
 // Tab Switching Events
+function activateInputView(activeTab, activeView) {
+  [tabYt, tabSubtitleTo, tabFile].forEach(tab => tab.classList.remove('active'));
+  [viewYt, viewSubtitleTo, viewUpload, viewTranslate].forEach(view => view.classList.remove('active'));
+  activeTab.classList.add('active');
+  activeView.classList.add('active');
+}
+
 tabYt.addEventListener('click', () => {
-  tabYt.classList.add('active');
-  tabFile.classList.remove('active');
-  viewYt.classList.add('active');
-  viewUpload.classList.remove('active');
+  activateInputView(tabYt, viewYt);
+});
+
+tabSubtitleTo.addEventListener('click', () => {
+  activateInputView(tabSubtitleTo, viewSubtitleTo);
 });
 
 tabFile.addEventListener('click', () => {
-  tabFile.classList.add('active');
-  tabYt.classList.remove('active');
-  viewUpload.classList.add('active');
-  viewYt.classList.remove('active');
+  activateInputView(tabFile, viewUpload);
+});
+
+function buildSubtitleToUrl(rawUrl) {
+  const trimmed = String(rawUrl || '').trim();
+  if (!trimmed) return '';
+  const normalized = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+  return `https://subtitle.to/${normalized}`;
+}
+
+function openSubtitleTo() {
+  const targetUrl = buildSubtitleToUrl(subtitleToUrlInput.value);
+  if (!targetUrl) {
+    alert('Please enter a YouTube video URL.');
+    return;
+  }
+
+  subtitleToWebview.setAttribute('src', targetUrl);
+  subtitleToWebview.classList.add('active');
+  subtitleToEmpty.classList.add('hidden');
+  subtitleToStatus.textContent = 'Loading subtitle.to...';
+}
+
+subtitleToOpenBtn.addEventListener('click', openSubtitleTo);
+subtitleToUrlInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    openSubtitleTo();
+  }
+});
+
+async function clickFirstSubtitleToSrt() {
+  if (!subtitleToWebview.getAttribute('src')) {
+    alert('Open a subtitle.to page first.');
+    return;
+  }
+
+  subtitleToClickSrtBtn.disabled = true;
+  subtitleToStatus.textContent = 'Searching for SRT...';
+
+  try {
+    const result = await subtitleToWebview.executeJavaScript(`
+      (() => {
+        const visible = (el) => {
+          const rect = el.getBoundingClientRect();
+          const style = window.getComputedStyle(el);
+          return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+        };
+
+        const textOf = (el) => (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
+        const candidates = Array.from(document.querySelectorAll('a, button, [role="button"]'))
+          .filter(visible)
+          .map((el) => ({ el, text: textOf(el) }))
+          .filter((item) => /(^|\\b)SRT(\\b|$)/i.test(item.text));
+
+        const englishCandidate = candidates.find((item) => {
+          const row = item.el.closest('tr, li, .row, .list-group-item, div');
+          return row && /English/i.test(textOf(row));
+        });
+
+        const target = (englishCandidate || candidates[0])?.el;
+        if (!target) {
+          return { ok: false, reason: 'No visible SRT button found.' };
+        }
+
+        target.scrollIntoView({ block: 'center', inline: 'center' });
+        target.click();
+        return { ok: true, text: textOf(target) };
+      })();
+    `);
+
+    if (result && result.ok) {
+      subtitleToStatus.textContent = `Clicked ${result.text || 'SRT'}.`;
+    } else {
+      subtitleToStatus.textContent = result?.reason || 'SRT button not found.';
+    }
+  } catch (error) {
+    subtitleToStatus.textContent = error.message || 'Could not click SRT.';
+  } finally {
+    subtitleToClickSrtBtn.disabled = false;
+  }
+}
+
+subtitleToClickSrtBtn.addEventListener('click', clickFirstSubtitleToSrt);
+subtitleToWebview.addEventListener('did-finish-load', () => {
+  subtitleToStatus.textContent = 'Page loaded. Click first SRT when the list is visible.';
+});
+subtitleToWebview.addEventListener('did-fail-load', (event) => {
+  if (event.errorCode !== -3) {
+    subtitleToStatus.textContent = `Load failed: ${event.errorDescription || event.errorCode}`;
+  }
 });
 
 // YouTube Subtitles Fetch Event
@@ -513,6 +618,8 @@ doneBtn.addEventListener('click', () => {
   
   if (tabYt.classList.contains('active')) {
     viewYt.classList.add('active');
+  } else if (tabSubtitleTo.classList.contains('active')) {
+    viewSubtitleTo.classList.add('active');
   } else {
     viewUpload.classList.add('active');
   }

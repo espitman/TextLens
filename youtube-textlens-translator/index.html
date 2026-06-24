@@ -66,6 +66,7 @@
       <!-- Workspace Navigation Tabs -->
       <div class="workspace-tabs" id="workspace-tabs">
         <button id="tab-yt" class="tab-btn active">YouTube Link</button>
+        <button id="tab-subtitleto" class="tab-btn">Subtitle.to</button>
         <button id="tab-file" class="tab-btn">Local SRT File</button>
       </div>
 
@@ -97,7 +98,42 @@
         </div>
       </div>
 
-      <!-- 2. Local File Upload View -->
+      <!-- 2. Subtitle.to WebView View -->
+      <div id="view-subtitleto" class="view-panel">
+        <section class="subtitleto-shell">
+          <div class="subtitleto-header">
+            <div>
+              <p class="eyebrow">Alternative caption extractor</p>
+              <h2>Open with subtitle.to</h2>
+              <p>Add <strong>subtitle.to/</strong> before the YouTube URL and use the site manually for now.</p>
+            </div>
+            <div class="subtitleto-input-group">
+              <input type="text" id="subtitleto-url" placeholder="https://www.youtube.com/watch?v=...">
+              <button id="subtitleto-open-btn" class="button primary" type="button">Open in WebView</button>
+            </div>
+            <div class="subtitleto-tools">
+              <button id="subtitleto-click-srt-btn" class="button secondary" type="button">Click first SRT</button>
+              <span id="subtitleto-status" class="subtitleto-status">Open a page first.</span>
+            </div>
+          </div>
+
+          <div class="subtitleto-frame-wrap">
+            <webview
+              id="subtitleto-webview"
+              class="subtitleto-webview"
+              partition="persist:textlens-subtitleto"
+              allowpopups
+            ></webview>
+            <div id="subtitleto-empty" class="subtitleto-empty">
+              <div class="drop-icon">↗</div>
+              <h2>Paste a YouTube link</h2>
+              <p>The generated subtitle.to page will open here.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 3. Local File Upload View -->
       <div id="view-upload" class="view-panel">
         <div class="drop-zone" id="drop-zone">
           <div class="drop-icon">📥</div>
@@ -107,7 +143,7 @@
         </div>
       </div>
 
-      <!-- 3. Processing View -->
+      <!-- 4. Processing View -->
       <div id="view-translate" class="view-panel">
         <div class="file-card">
           <div class="file-details">
