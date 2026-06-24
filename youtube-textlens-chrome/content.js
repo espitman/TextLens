@@ -41,10 +41,6 @@ function canonicalVideoUrl(videoId) {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 }
 
-function subtitleToUrl(videoId) {
-  return `https://subtitle.to/${canonicalVideoUrl(videoId)}`;
-}
-
 function getVideoTitle() {
   return (
     document.querySelector("h1.ytd-watch-metadata yt-formatted-string")?.textContent?.trim() ||
@@ -161,11 +157,6 @@ function ensureBadge() {
           </div>
         </div>
         <div class="textlens-actions">
-          <button class="textlens-icon-button" type="button" data-role="downloadSubtitle" title="Download SRT with subtitle.to" aria-label="Download SRT with subtitle.to">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3a1 1 0 0 1 1 1v8.6l2.8-2.8a1 1 0 0 1 1.4 1.4l-4.5 4.5a1 1 0 0 1-1.4 0l-4.5-4.5a1 1 0 1 1 1.4-1.4l2.8 2.8V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" fill="currentColor"/>
-            </svg>
-          </button>
           <button class="textlens-icon-button" type="button" data-role="loadSrt" title="Load SRT file" aria-label="Load SRT file">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Zm-.5 2.4L16.6 8H14a.5.5 0 0 1-.5-.5V5.4ZM8 13h3v-2a1 1 0 1 1 2 0v2h3a1 1 0 1 1 0 2h-3v2a1 1 0 1 1-2 0v-2H8a1 1 0 1 1 0-2Z" fill="currentColor"/>
@@ -398,6 +389,9 @@ function ensureBadge() {
     }
     #${SETTINGS_MODAL_ID} .textlens-modal-card {
       width: min(560px, 100%);
+      max-height: min(760px, calc(100vh - 48px));
+      overflow: auto;
+      overscroll-behavior: contain;
       pointer-events: auto;
       border-radius: 18px;
       background:
@@ -405,18 +399,28 @@ function ensureBadge() {
         #101010;
       animation: textlens-modal-in 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
     }
+    #${SETTINGS_MODAL_ID} .textlens-modal-card,
+    #${SETTINGS_MODAL_ID} .textlens-modal-card * {
+      box-sizing: border-box;
+    }
     #${SETTINGS_MODAL_ID} .textlens-settings-header {
+      position: sticky;
+      top: -22px;
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 14px;
       margin: -6px -6px 10px;
       padding: 8px 6px;
+      background:
+        linear-gradient(180deg, rgba(16, 16, 16, 0.98), rgba(16, 16, 16, 0.92));
       cursor: move;
       user-select: none;
       -webkit-user-select: none;
     }
     #${SETTINGS_MODAL_ID} button {
+      box-sizing: border-box;
       border: 0;
       background: #ffd000;
       color: #080808;
@@ -443,11 +447,70 @@ function ensureBadge() {
       color: #080808;
     }
     #${SETTINGS_MODAL_ID} .textlens-modal-title {
-      margin: 0 0 10px;
+      margin: 0;
       color: #ffd000;
       font-size: 14px;
       font-weight: 900;
       text-transform: uppercase;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-tabs {
+      display: flex;
+      gap: 18px;
+      margin: 10px -2px 4px;
+      padding: 0 2px 10px;
+      border-bottom: 1px solid rgba(255, 208, 0, 0.22);
+      background: transparent;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-tabs button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 6px 0;
+      border-radius: 0;
+      background: transparent;
+      color: #b8b8b8;
+      font-size: 12px;
+      letter-spacing: 0;
+      transition:
+        color 160ms ease,
+        transform 160ms ease;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-tabs button::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -11px;
+      height: 3px;
+      border-radius: 999px;
+      background: #ffd000;
+      opacity: 0;
+      transform: scaleX(0.4);
+      transition:
+        opacity 160ms ease,
+        transform 160ms ease;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-tabs button.is-active {
+      background: transparent;
+      color: #ffd000;
+      box-shadow: none;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-tabs button.is-active::after {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-tabs button:not(.is-active):hover {
+      color: #fff;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-tab-panel {
+      display: none;
+      animation: textlens-tab-in 180ms ease both;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-tab-panel.is-active {
+      display: block;
     }
     #${SETTINGS_MODAL_ID} .textlens-settings-grid {
       display: grid;
@@ -481,15 +544,50 @@ function ensureBadge() {
         inset 0 0 0 1px rgba(0, 0, 0, 0.5);
     }
     #${SETTINGS_MODAL_ID} input[type="range"] {
+      box-sizing: border-box;
       width: 100%;
       accent-color: #ffd000;
     }
     #${SETTINGS_MODAL_ID} input[type="color"] {
+      box-sizing: border-box;
       width: 64px;
       height: 34px;
       border: 1px solid rgba(255, 255, 255, 0.14);
       background: #060606;
       padding: 4px;
+    }
+    #${SETTINGS_MODAL_ID} input[type="text"],
+    #${SETTINGS_MODAL_ID} input[type="password"],
+    #${SETTINGS_MODAL_ID} input[type="url"],
+    #${SETTINGS_MODAL_ID} select {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.42);
+      color: #fff;
+      font: inherit;
+      font-weight: 750;
+      padding: 8px 10px;
+      outline: none;
+    }
+    #${SETTINGS_MODAL_ID} input[type="text"]:focus,
+    #${SETTINGS_MODAL_ID} input[type="password"]:focus,
+    #${SETTINGS_MODAL_ID} input[type="url"]:focus,
+    #${SETTINGS_MODAL_ID} select:focus {
+      border-color: rgba(255, 208, 0, 0.8);
+      box-shadow: 0 0 0 3px rgba(255, 208, 0, 0.12);
+    }
+    #${SETTINGS_MODAL_ID} select {
+      appearance: auto;
+      cursor: pointer;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-custom-model {
+      margin-top: 8px;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-custom-model[hidden] {
+      display: none;
     }
     #${SETTINGS_MODAL_ID} .textlens-setting-value {
       color: #ffd000;
@@ -510,6 +608,14 @@ function ensureBadge() {
       font-size: 13px;
       font-weight: 800;
     }
+    #${SETTINGS_MODAL_ID} .textlens-position-action span.is-error {
+      color: #ff5a5f;
+    }
+    #${SETTINGS_MODAL_ID} .textlens-settings-divider {
+      height: 1px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.12);
+    }
     #${SETTINGS_MODAL_ID} .textlens-modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -529,6 +635,19 @@ function ensureBadge() {
         opacity: 1;
         transform: translateY(0) scale(1);
       }
+    }
+    @keyframes textlens-tab-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes textlens-spin {
+      to { transform: rotate(360deg); }
     }
     #${SUBTITLE_ID} {
       position: absolute;
@@ -566,11 +685,6 @@ function ensureBadge() {
 
   badge.querySelector('[data-role="loadSrt"]').addEventListener("click", () => {
     badge.querySelector('[data-role="badgeSrtFile"]').click();
-  });
-  badge.querySelector('[data-role="downloadSubtitle"]').addEventListener("click", () => {
-    const videoId = extractVideoIdFromLocation();
-    if (!videoId) return;
-    window.open(subtitleToUrl(videoId), "_blank", "noopener,noreferrer");
   });
   badge.querySelector('[data-role="badgeSrtFile"]').addEventListener("change", async (event) => {
     await loadManualSrtFromInput(event.target.files?.[0], {
@@ -654,12 +768,27 @@ async function restoreSubtitleSettings() {
 
 function applySettingsModalPosition(modal) {
   const card = modal.querySelector(".textlens-modal-card");
-  if (!card || settingsPosition.left === null || settingsPosition.top === null) return;
+  if (!card) return;
 
-  modal.style.placeItems = "start";
-  card.style.position = "fixed";
-  card.style.left = `${settingsPosition.left}px`;
-  card.style.top = `${settingsPosition.top}px`;
+  const placeCard = () => {
+    const rect = card.getBoundingClientRect();
+    const maxLeft = Math.max(12, window.innerWidth - rect.width - 12);
+    const maxTop = Math.max(12, window.innerHeight - rect.height - 12);
+    const fallbackLeft = Math.max(12, (window.innerWidth - rect.width) / 2);
+    const fallbackTop = Math.max(12, (window.innerHeight - rect.height) / 2);
+    const left = clamp(settingsPosition.left ?? fallbackLeft, 12, maxLeft);
+    const top = clamp(settingsPosition.top ?? fallbackTop, 12, maxTop);
+
+    modal.style.placeItems = "start";
+    card.style.position = "fixed";
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+    settingsPosition = { left, top };
+  };
+
+  if (settingsPosition.left === null || settingsPosition.top === null) return;
+  const scheduleFrame = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 0));
+  scheduleFrame(placeCard);
 }
 
 async function saveSettingsPosition() {
@@ -830,7 +959,6 @@ function showSettingsModal() {
   document.documentElement.appendChild(modal);
   syncSwatches();
 }
-
 function updateBadge(videoId) {
   ensureBadge();
   updatePlaybackBadge();
@@ -840,6 +968,8 @@ function updatePlaybackBadge() {
   const badge = document.getElementById(BADGE_ID);
   if (!badge) return;
 
+  if (badge.dataset.statusOverride) return;
+
   const playback = readPlaybackState();
   const stateText = playback.isFound ? (playback.isPaused ? "II" : "▶") : "...";
   badge.querySelector('[data-role="state"]').textContent = stateText;
@@ -847,6 +977,29 @@ function updatePlaybackBadge() {
     `${formatTime(playback.time)} / ${formatTime(playback.duration)}`;
   badge.querySelector('[data-role="rate"]').textContent = `${playback.playbackRate}x`;
   renderSubtitleAt(playback.time);
+}
+
+function setBadgeStatusOverride(message, timeout = 0) {
+  const badge = document.getElementById(BADGE_ID);
+  if (!badge) return;
+
+  badge.dataset.statusOverride = message;
+  badge.querySelector('[data-role="state"]').textContent = message;
+  if (timeout > 0) {
+    window.setTimeout(() => {
+      if (badge.dataset.statusOverride === message) {
+        delete badge.dataset.statusOverride;
+        updatePlaybackBadge();
+      }
+    }, timeout);
+  }
+}
+
+function clearBadgeStatusOverride() {
+  const badge = document.getElementById(BADGE_ID);
+  if (!badge) return;
+  delete badge.dataset.statusOverride;
+  updatePlaybackBadge();
 }
 
 function removeBadge() {
