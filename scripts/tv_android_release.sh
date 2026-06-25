@@ -5,6 +5,7 @@ set -euo pipefail
 PROJECT_ROOT="/Users/espitman/Documents/Projects/TextLens"
 TV_DIR="$PROJECT_ROOT/tv-textlens"
 DESKTOP_DIR="$HOME/Desktop"
+VERSION_NAME="${VERSION_NAME:-0.1.0}"
 
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
 ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
@@ -73,7 +74,7 @@ if [ ! -f "$APK_PATH" ]; then
   exit 1
 fi
 
-OUT_APK="$DESKTOP_DIR/textlens-tv-release.apk"
+OUT_APK="$DESKTOP_DIR/TextLens-TV-$VERSION_NAME.apk"
 cp "$APK_PATH" "$OUT_APK"
 
 echo "Release APK copied to:"

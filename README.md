@@ -10,6 +10,7 @@ The macOS app is available as an experimental GitHub release. It runs as a menu 
 TextLens/
   android/       Android app implementation
   macos/         macOS app implementation
+  tv-textlens/   Android TV subtitle overlay app
   docs/          product specs and implementation plans
   site/          GitHub Pages landing page
   scripts/       release and packaging scripts
@@ -82,6 +83,33 @@ Build an unsigned release APK with:
 ./scripts/android_release.sh
 ```
 
+## TextLens TV
+
+The Android TV / Google TV subtitle overlay app lives in:
+
+```text
+tv-textlens
+```
+
+It renders synced SRT subtitles over YouTube and serves a local web panel for uploading translated subtitle files and tuning the overlay style.
+
+Build a signed experimental TV APK with:
+
+```sh
+./scripts/tv_android_release.sh
+```
+
+The APK is copied to:
+
+```text
+~/Desktop/TextLens-TV-0.1.0.apk
+```
+
+Release guide:
+
+- [TextLens TV README](tv-textlens/README.md)
+- [TV experimental release guide](docs/tv_EXPERIMENTAL_RELEASE.md)
+
 ## Latest Release
 
 - [Download TextLens](https://github.com/espitman/TextLens/releases/latest)
@@ -102,3 +130,4 @@ It is deployed by `.github/workflows/pages.yml`.
 - [macOS MVP TODO](docs/macos_TODO.md)
 - [macOS experimental release guide](docs/macos_EXPERIMENTAL_RELEASE.md)
 - [Android TODO](docs/ANDROID_TODO.md)
+- [TV experimental release guide](docs/tv_EXPERIMENTAL_RELEASE.md)
