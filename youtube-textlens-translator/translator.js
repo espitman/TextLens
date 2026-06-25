@@ -67,6 +67,8 @@ function formatPrompt(chunk) {
   
   return `You are an expert subtitle translator. Translate the following English subtitle blocks into fluent, natural, and idiomatic Persian (Farsi).
 Maintain the exact index prefix and structure. Do NOT add notes, explanations, or change the indexes.
+Return exactly ${chunk.length} translated lines. Every requested index must appear exactly once.
+Translate every line to Persian. Do not leave any English sentence untranslated.
 Keep special tags like [Music] or [Applause] in their appropriate Persian equivalents (e.g. [موسیقی] or [تشویق]).
 Correct any clear speech-to-text spelling/names errors (e.g. edit names of players or teams if they are obviously misspelled in the English transcript).
 
@@ -122,20 +124,57 @@ async function callOpenAICompatibleAPI(baseURL, apiKey, modelName, prompt) {
 /**
  * Parses the translated response and maps indexes to their Persian translations.
  */
-function parseTranslationResponse(responseText, progressMap) {
+function parseTranslationResponse(responseText, progressMap, allowedIndexes = null) {
   const lines = responseText.split('\n');
+  const allowed = allowedIndexes ? new Set(allowedIndexes) : null;
+  const parsed = new Map();
+  let currentIndex = null;
+  let currentText = [];
   let count = 0;
+
+  const normalizeDigits = (value) => String(value)
+    .replace(/[۰-۹]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))
+    .replace(/[٠-٩]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'.indexOf(digit));
+
+  const flush = () => {
+    if (currentIndex === null) return;
+    if (allowed && !allowed.has(currentIndex)) {
+      currentIndex = null;
+      currentText = [];
+      return;
+    }
+
+    const text = currentText.join(' ').replace(/\s+/g, ' ').trim();
+    if (text) {
+      parsed.set(currentIndex, text);
+    }
+    currentIndex = null;
+    currentText = [];
+  };
   
   for (const line of lines) {
-    const match = line.trim().match(/^(\d+)\s*:\s*(.*)$/);
+    const trimmed = line.trim();
+    const match = trimmed.match(/^(?:[-*]\s*)?\[?([0-9۰-۹٠-٩]+)\]?\s*(?::|\.|\)|-|–|—)\s*(.*)$/);
     if (match) {
-      const index = parseInt(match[1], 10);
-      const text = match[2].trim();
-      progressMap[index] = text;
-      count++;
+      flush();
+      currentIndex = parseInt(normalizeDigits(match[1]), 10);
+      currentText = [match[2].trim()].filter(Boolean);
+    } else if (currentIndex !== null && trimmed) {
+      currentText.push(trimmed);
     }
   }
+  flush();
+
+  for (const [index, text] of parsed.entries()) {
+    progressMap[index] = text;
+    count++;
+  }
+
   return count;
+}
+
+function missingTranslations(blocks, progressMap) {
+  return blocks.filter((block) => !String(progressMap[block.index] || '').trim());
 }
 
 /**
@@ -144,7 +183,7 @@ function parseTranslationResponse(responseText, progressMap) {
 function compileSRT(blocks, progressMap) {
   const lines = [];
   for (const b of blocks) {
-    const translation = progressMap[b.index] || b.text; // Fallback to English if not translated
+    const translation = progressMap[b.index] || '';
     lines.push(`${b.index}`);
     lines.push(`${b.time}`);
     lines.push(`${translation}`);
@@ -160,5 +199,6 @@ window.SubtitleTranslator = {
   formatPrompt,
   callOpenAICompatibleAPI,
   parseTranslationResponse,
+  missingTranslations,
   compileSRT
 };

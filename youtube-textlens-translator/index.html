@@ -66,7 +66,6 @@
       <!-- Workspace Navigation Tabs -->
       <div class="workspace-tabs" id="workspace-tabs">
         <button id="tab-yt" class="tab-btn active">YouTube Link</button>
-        <button id="tab-subtitleto" class="tab-btn">Subtitle.to</button>
         <button id="tab-file" class="tab-btn">Local SRT File</button>
       </div>
 
@@ -75,64 +74,27 @@
         <div class="drop-zone" style="cursor: default; border-style: solid;">
           <div class="drop-icon">🎥</div>
           <h2>Translate YouTube Subtitles</h2>
-          <p>Enter a YouTube video URL to extract and translate its captions</p>
+          <p>Enter a YouTube video URL. TextLens fetches the first English SRT through subtitle.to in the background.</p>
           
           <div class="yt-input-group">
             <input type="text" id="yt-url" placeholder="https://www.youtube.com/watch?v=...">
-            <button id="yt-fetch-btn" class="button primary">Fetch Subtitles</button>
+            <button id="yt-fetch-btn" class="button primary">Fetch SRT</button>
           </div>
           
           <div class="yt-settings-row">
-            <label class="eyebrow" style="margin: 0;">Subtitles Language</label>
-            <div class="select-wrapper" style="width: 150px; margin-left: 10px;">
-              <select id="yt-lang">
-                <option value="en">English (en)</option>
-                <option value="a.en">English (auto-generated)</option>
-                <option value="fa">Persian (fa)</option>
-                <option value="es">Spanish (es)</option>
-                <option value="fr">French (fr)</option>
-                <option value="de">German (de)</option>
-              </select>
-            </div>
+            <span id="subtitleto-status" class="subtitleto-status">Ready.</span>
           </div>
+
+          <webview
+            id="subtitleto-webview"
+            class="subtitleto-webview"
+            partition="persist:textlens-subtitleto"
+            allowpopups
+          ></webview>
         </div>
       </div>
 
-      <!-- 2. Subtitle.to WebView View -->
-      <div id="view-subtitleto" class="view-panel">
-        <section class="subtitleto-shell">
-          <div class="subtitleto-header">
-            <div>
-              <p class="eyebrow">Alternative caption extractor</p>
-              <h2>Fetch with subtitle.to</h2>
-              <p>TextLens opens subtitle.to in the background, clicks the first English SRT, and loads the downloaded file.</p>
-            </div>
-            <div class="subtitleto-input-group">
-              <input type="text" id="subtitleto-url" placeholder="https://www.youtube.com/watch?v=...">
-              <button id="subtitleto-open-btn" class="button primary" type="button">Fetch SRT</button>
-            </div>
-            <div class="subtitleto-tools">
-              <span id="subtitleto-status" class="subtitleto-status">Open a page first.</span>
-            </div>
-          </div>
-
-          <div class="subtitleto-frame-wrap">
-            <webview
-              id="subtitleto-webview"
-              class="subtitleto-webview"
-              partition="persist:textlens-subtitleto"
-              allowpopups
-            ></webview>
-            <div id="subtitleto-empty" class="subtitleto-empty">
-              <div class="drop-icon">↗</div>
-              <h2>Paste a YouTube link</h2>
-              <p>The subtitle.to page runs hidden in the background.</p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- 3. Local File Upload View -->
+      <!-- 2. Local File Upload View -->
       <div id="view-upload" class="view-panel">
         <div class="drop-zone" id="drop-zone">
           <div class="drop-icon">📥</div>
@@ -142,7 +104,7 @@
         </div>
       </div>
 
-      <!-- 4. Processing View -->
+      <!-- 3. Processing View -->
       <div id="view-translate" class="view-panel">
         <div class="file-card">
           <div class="file-details">

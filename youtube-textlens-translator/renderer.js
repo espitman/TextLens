@@ -10,10 +10,8 @@ const concurrencySlider = document.getElementById('concurrency-slider');
 const concurrencyVal = document.getElementById('concurrency-val');
 
 const tabYt = document.getElementById('tab-yt');
-const tabSubtitleTo = document.getElementById('tab-subtitleto');
 const tabFile = document.getElementById('tab-file');
 const viewYt = document.getElementById('view-yt');
-const viewSubtitleTo = document.getElementById('view-subtitleto');
 const viewUpload = document.getElementById('view-upload');
 const viewTranslate = document.getElementById('view-translate');
 const dropZone = document.getElementById('drop-zone');
@@ -21,12 +19,8 @@ const browseBtn = document.getElementById('browse-btn');
 
 const ytUrlInput = document.getElementById('yt-url');
 const ytFetchBtn = document.getElementById('yt-fetch-btn');
-const ytLangSelect = document.getElementById('yt-lang');
-const subtitleToUrlInput = document.getElementById('subtitleto-url');
-const subtitleToOpenBtn = document.getElementById('subtitleto-open-btn');
 const subtitleToStatus = document.getElementById('subtitleto-status');
 const subtitleToWebview = document.getElementById('subtitleto-webview');
-const subtitleToEmpty = document.getElementById('subtitleto-empty');
 
 const loadedFileName = document.getElementById('loaded-file-name');
 const loadedFileInfo = document.getElementById('loaded-file-info');
@@ -52,6 +46,7 @@ let isTranslating = false;
 let shouldCancel = false;
 let subtitleToRunId = 0;
 let subtitleToAutomationRunning = false;
+let subtitleToCurrentVideoId = '';
 
 // API Models configuration with pricing (per 1M tokens in USD)
 const modelsMap = {
@@ -238,7 +233,6 @@ function setLoadedFile(file) {
   // Transition to Translation view
   viewUpload.classList.remove('active');
   viewYt.classList.remove('active');
-  viewSubtitleTo.classList.remove('active');
   viewTranslate.classList.add('active');
   
   // Reset logs and success states
@@ -299,6 +293,9 @@ async function startTranslation() {
   const apiKey = apiKeyInput.value.trim();
   const model = modelSelect.value;
   const concurrency = parseInt(concurrencySlider.value, 10);
+  const baseURL = provider === 'liara'
+    ? 'https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1'
+    : 'https://openrouter.ai/api/v1';
   
   if (!apiKey) {
     alert('Please enter your API Key in the sidebar settings first.');
@@ -349,13 +346,15 @@ async function startTranslation() {
       
       while (retries > 0 && !success && !shouldCancel) {
         try {
-          const baseURL = provider === 'liara'
-            ? 'https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1'
-            : 'https://openrouter.ai/api/v1';
-            
           const responseText = await window.SubtitleTranslator.callOpenAICompatibleAPI(baseURL, apiKey, model, prompt);
           
-          const parsedCount = window.SubtitleTranslator.parseTranslationResponse(responseText, translationProgress);
+          const expectedIndexes = chunk.map(block => block.index);
+          const parsedCount = window.SubtitleTranslator.parseTranslationResponse(responseText, translationProgress, expectedIndexes);
+          const missing = window.SubtitleTranslator.missingTranslations(chunk, translationProgress);
+          if (missing.length > 0) {
+            throw new Error(`Model omitted ${missing.length}/${chunk.length} lines: ${missing.map(block => block.index).join(', ')}`);
+          }
+
           success = true;
           completedChunks++;
           
@@ -392,6 +391,36 @@ async function startTranslation() {
   }
   
   await Promise.all(workers);
+
+  if (!shouldCancel) {
+    let missingBlocks = window.SubtitleTranslator.missingTranslations(parsedBlocks, translationProgress);
+    if (missingBlocks.length > 0) {
+      appendLog(`\nRepair pass: ${missingBlocks.length} untranslated blocks remain. Retrying in smaller chunks...`);
+
+      for (let pass = 1; pass <= 3 && missingBlocks.length > 0 && !shouldCancel; pass++) {
+        const repairChunks = window.SubtitleTranslator.chunkBlocks(missingBlocks, pass === 3 ? 1 : 8);
+
+        for (const repairChunk of repairChunks) {
+          if (shouldCancel) break;
+          const startB = repairChunk[0].index;
+          const endB = repairChunk[repairChunk.length - 1].index;
+          appendLog(`[Repair ${pass}] Translating missing blocks ${startB}–${endB}...`);
+
+          try {
+            const repairPrompt = window.SubtitleTranslator.formatPrompt(repairChunk);
+            const responseText = await window.SubtitleTranslator.callOpenAICompatibleAPI(baseURL, apiKey, model, repairPrompt);
+            const expectedIndexes = repairChunk.map(block => block.index);
+            window.SubtitleTranslator.parseTranslationResponse(responseText, translationProgress, expectedIndexes);
+            updatePreview();
+          } catch (err) {
+            appendLog(`[Repair ${pass}] Error on ${startB}–${endB}: ${err.message}`);
+          }
+        }
+
+        missingBlocks = window.SubtitleTranslator.missingTranslations(parsedBlocks, translationProgress);
+      }
+    }
+  }
   
   isTranslating = false;
   resetBtn.style.display = 'none';
@@ -404,11 +433,17 @@ async function startTranslation() {
     return;
   }
   
-  statusBadge.className = 'status-badge';
-  statusBadge.textContent = 'Done';
-  appendLog('\nTranslation process completed!');
-  
-  // Show Success Card
+  const finalMissing = window.SubtitleTranslator.missingTranslations(parsedBlocks, translationProgress);
+  if (finalMissing.length > 0) {
+    statusBadge.className = 'status-badge';
+    statusBadge.textContent = 'Needs review';
+    appendLog(`\nTranslation finished with ${finalMissing.length} untranslated blocks. The saved file will leave those cues blank instead of English.`);
+  } else {
+    statusBadge.className = 'status-badge';
+    statusBadge.textContent = 'Done';
+    appendLog('\nTranslation process completed!');
+  }
+
   successBox.style.display = 'flex';
 }
 
@@ -454,7 +489,9 @@ saveBtn.addEventListener('click', async () => {
   
   // Compile SRT
   const finalSrtContent = window.SubtitleTranslator.compileSRT(parsedBlocks, translationProgress);
-  const defaultSaveName = loadedFile.name.replace('.srt', '_fa.srt');
+  const defaultSaveName = loadedFile.videoId
+    ? `${loadedFile.videoId}-fa.srt`
+    : loadedFile.name.replace(/\.srt$/i, '-fa.srt');
   
   const result = await window.electronAPI.saveSrtFile({
     defaultName: defaultSaveName,
@@ -468,18 +505,14 @@ saveBtn.addEventListener('click', async () => {
 
 // Tab Switching Events
 function activateInputView(activeTab, activeView) {
-  [tabYt, tabSubtitleTo, tabFile].forEach(tab => tab.classList.remove('active'));
-  [viewYt, viewSubtitleTo, viewUpload, viewTranslate].forEach(view => view.classList.remove('active'));
+  [tabYt, tabFile].forEach(tab => tab.classList.remove('active'));
+  [viewYt, viewUpload, viewTranslate].forEach(view => view.classList.remove('active'));
   activeTab.classList.add('active');
   activeView.classList.add('active');
 }
 
 tabYt.addEventListener('click', () => {
   activateInputView(tabYt, viewYt);
-});
-
-tabSubtitleTo.addEventListener('click', () => {
-  activateInputView(tabSubtitleTo, viewSubtitleTo);
 });
 
 tabFile.addEventListener('click', () => {
@@ -495,8 +528,23 @@ function buildSubtitleToUrl(rawUrl) {
   return `https://subtitle.to/${normalized}`;
 }
 
-function openSubtitleTo() {
-  const targetUrl = buildSubtitleToUrl(subtitleToUrlInput.value);
+function extractYouTubeVideoId(input) {
+  const trimmed = String(input || '').trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    if (url.hostname.includes('youtu.be')) {
+      return url.pathname.replace('/', '').slice(0, 11);
+    }
+    return url.searchParams.get('v') || '';
+  } catch (_) {
+    const match = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{11})|youtu\.be\/([a-zA-Z0-9_-]{11})|\/shorts\/([a-zA-Z0-9_-]{11})/);
+    return match ? (match[1] || match[2] || match[3] || '') : '';
+  }
+}
+
+function openSubtitleTo(rawUrl) {
+  const targetUrl = buildSubtitleToUrl(rawUrl);
   if (!targetUrl) {
     alert('Please enter a YouTube video URL.');
     return;
@@ -504,20 +552,13 @@ function openSubtitleTo() {
 
   subtitleToRunId++;
   subtitleToAutomationRunning = false;
-  subtitleToOpenBtn.disabled = true;
-  subtitleToOpenBtn.textContent = 'Fetching...';
+  subtitleToCurrentVideoId = extractYouTubeVideoId(rawUrl);
+  ytFetchBtn.disabled = true;
+  ytFetchBtn.textContent = 'Fetching...';
   subtitleToWebview.setAttribute('src', targetUrl);
   subtitleToWebview.classList.add('active');
-  subtitleToEmpty.classList.remove('hidden');
   subtitleToStatus.textContent = 'Loading subtitle.to in background...';
 }
-
-subtitleToOpenBtn.addEventListener('click', openSubtitleTo);
-subtitleToUrlInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    openSubtitleTo();
-  }
-});
 
 async function clickFirstSubtitleToSrt() {
   if (!subtitleToWebview.getAttribute('src')) {
@@ -591,8 +632,8 @@ async function runSubtitleToAutomation(runId) {
 
   if (runId === subtitleToRunId) {
     subtitleToStatus.textContent = 'SRT button not found. Try again or use the normal YouTube fetch.';
-    subtitleToOpenBtn.disabled = false;
-    subtitleToOpenBtn.textContent = 'Fetch SRT';
+    ytFetchBtn.disabled = false;
+    ytFetchBtn.textContent = 'Fetch SRT';
   }
 }
 
@@ -603,14 +644,14 @@ subtitleToWebview.addEventListener('did-finish-load', () => {
 subtitleToWebview.addEventListener('did-fail-load', (event) => {
   if (event.errorCode !== -3) {
     subtitleToStatus.textContent = `Load failed: ${event.errorDescription || event.errorCode}`;
-    subtitleToOpenBtn.disabled = false;
-    subtitleToOpenBtn.textContent = 'Fetch SRT';
+    ytFetchBtn.disabled = false;
+    ytFetchBtn.textContent = 'Fetch SRT';
   }
 });
 
 window.electronAPI.onSubtitleToDownload((payload) => {
-  subtitleToOpenBtn.disabled = false;
-  subtitleToOpenBtn.textContent = 'Fetch SRT';
+  ytFetchBtn.disabled = false;
+  ytFetchBtn.textContent = 'Fetch SRT';
 
   if (!payload || !payload.ok) {
     subtitleToStatus.textContent = payload?.error || 'Download failed.';
@@ -618,42 +659,31 @@ window.electronAPI.onSubtitleToDownload((payload) => {
   }
 
   subtitleToStatus.textContent = `Downloaded ${payload.name}.`;
+  const videoId = subtitleToCurrentVideoId || extractYouTubeVideoId(ytUrlInput.value);
+  const fileName = videoId ? `${videoId}.srt` : payload.name;
   setLoadedFile({
-    name: payload.name,
+    name: fileName,
     path: payload.path,
-    content: payload.content
+    content: payload.content,
+    videoId
   });
 });
 
 // YouTube Subtitles Fetch Event
 ytFetchBtn.addEventListener('click', async () => {
   const url = ytUrlInput.value.trim();
-  const lang = ytLangSelect.value;
   
   if (!url) {
     alert('Please enter a YouTube video URL.');
     return;
   }
   
-  ytFetchBtn.disabled = true;
-  ytFetchBtn.textContent = 'Fetching...';
-  
-  try {
-    const result = await window.electronAPI.extractYoutubeSubtitles({ url, lang });
-    
-    setLoadedFile({
-      name: `${result.title}.srt`,
-      path: `${result.title}.srt`,
-      content: result.content
-    });
-    
-    // Clear input
-    ytUrlInput.value = '';
-  } catch (err) {
-    alert(`Failed to fetch subtitles: ${err.message}`);
-  } finally {
-    ytFetchBtn.disabled = false;
-    ytFetchBtn.textContent = 'Fetch Subtitles';
+  openSubtitleTo(url);
+});
+
+ytUrlInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    ytFetchBtn.click();
   }
 });
 
@@ -667,8 +697,6 @@ doneBtn.addEventListener('click', () => {
   
   if (tabYt.classList.contains('active')) {
     viewYt.classList.add('active');
-  } else if (tabSubtitleTo.classList.contains('active')) {
-    viewSubtitleTo.classList.add('active');
   } else {
     viewUpload.classList.add('active');
   }
