@@ -10,6 +10,7 @@ data class SubtitleCue(
 
 data class SubtitleBinding(
     val fileName: String,
+    val videoId: String = "",
     val mediaTitle: String,
     val mediaDurationMs: Long,
     val subtitleDurationMs: Long,
@@ -71,3 +72,8 @@ fun Int.toHexColor(): String = "#%06X".format(0xFFFFFF and this)
 
 fun String.toColorIntOr(defaultColor: Int): Int =
     runCatching { Color.parseColor(this) }.getOrDefault(defaultColor)
+
+fun extractYoutubeVideoId(value: String): String? {
+    val regex = Regex("(?<![A-Za-z0-9_-])([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])")
+    return regex.find(value)?.groupValues?.get(1)
+}

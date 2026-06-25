@@ -22,6 +22,12 @@ const ytFetchBtn = document.getElementById('yt-fetch-btn');
 const subtitleToStatus = document.getElementById('subtitleto-status');
 const subtitleToWebview = document.getElementById('subtitleto-webview');
 
+function setSubtitleToStatus(message) {
+  if (subtitleToStatus) {
+    subtitleToStatus.textContent = message;
+  }
+}
+
 const loadedFileName = document.getElementById('loaded-file-name');
 const loadedFileInfo = document.getElementById('loaded-file-info');
 const startBtn = document.getElementById('start-btn');
@@ -37,6 +43,21 @@ const previewOutput = document.getElementById('preview-output');
 const successBox = document.getElementById('success-box');
 const saveBtn = document.getElementById('save-btn');
 const doneBtn = document.getElementById('done-btn');
+const saveDialog = document.getElementById('save-dialog');
+const saveDialogPath = document.getElementById('save-dialog-path');
+const saveDialogOk = document.getElementById('save-dialog-ok');
+
+function showSaveDialog(path) {
+  if (!saveDialog || !saveDialogPath) return;
+  saveDialogPath.textContent = path;
+  saveDialog.style.display = 'flex';
+}
+
+function hideSaveDialog() {
+  if (saveDialog) {
+    saveDialog.style.display = 'none';
+  }
+}
 
 // State
 let loadedFile = null; // { name, path, content }
@@ -499,9 +520,11 @@ saveBtn.addEventListener('click', async () => {
   });
   
   if (result.success) {
-    alert(`Subtitle saved successfully to:\n${result.path}`);
+    showSaveDialog(result.path);
   }
 });
+
+saveDialogOk?.addEventListener('click', hideSaveDialog);
 
 // Tab Switching Events
 function activateInputView(activeTab, activeView) {
@@ -557,7 +580,7 @@ function openSubtitleTo(rawUrl) {
   ytFetchBtn.textContent = 'Fetching...';
   subtitleToWebview.setAttribute('src', targetUrl);
   subtitleToWebview.classList.add('active');
-  subtitleToStatus.textContent = 'Loading subtitle.to in background...';
+  setSubtitleToStatus('Loading subtitle.to in background...');
 }
 
 async function clickFirstSubtitleToSrt() {
@@ -616,34 +639,34 @@ async function runSubtitleToAutomation(runId) {
   for (let attempt = 1; attempt <= 30; attempt++) {
     if (runId !== subtitleToRunId) return;
 
-    subtitleToStatus.textContent = `Searching for SRT... ${attempt}/30`;
+    setSubtitleToStatus(`Searching for SRT... ${attempt}/30`);
     await new Promise(resolve => setTimeout(resolve, attempt <= 3 ? 900 : 1500));
 
     try {
       const result = await clickFirstSubtitleToSrt();
       if (result && result.ok) {
-        subtitleToStatus.textContent = `Clicked ${result.text || 'SRT'}, waiting for download...`;
+        setSubtitleToStatus(`Clicked ${result.text || 'SRT'}, waiting for download...`);
         return;
       }
     } catch (error) {
-      subtitleToStatus.textContent = error.message || 'Could not inspect subtitle.to.';
+      setSubtitleToStatus(error.message || 'Could not inspect subtitle.to.');
     }
   }
 
   if (runId === subtitleToRunId) {
-    subtitleToStatus.textContent = 'SRT button not found. Try again or use the normal YouTube fetch.';
+    setSubtitleToStatus('SRT button not found. Try again or use the normal YouTube fetch.');
     ytFetchBtn.disabled = false;
     ytFetchBtn.textContent = 'Fetch SRT';
   }
 }
 
 subtitleToWebview.addEventListener('did-finish-load', () => {
-  subtitleToStatus.textContent = 'Page loaded. Waiting for SRT list...';
+  setSubtitleToStatus('Page loaded. Waiting for SRT list...');
   runSubtitleToAutomation(subtitleToRunId);
 });
 subtitleToWebview.addEventListener('did-fail-load', (event) => {
   if (event.errorCode !== -3) {
-    subtitleToStatus.textContent = `Load failed: ${event.errorDescription || event.errorCode}`;
+    setSubtitleToStatus(`Load failed: ${event.errorDescription || event.errorCode}`);
     ytFetchBtn.disabled = false;
     ytFetchBtn.textContent = 'Fetch SRT';
   }
@@ -654,11 +677,11 @@ window.electronAPI.onSubtitleToDownload((payload) => {
   ytFetchBtn.textContent = 'Fetch SRT';
 
   if (!payload || !payload.ok) {
-    subtitleToStatus.textContent = payload?.error || 'Download failed.';
+    setSubtitleToStatus(payload?.error || 'Download failed.');
     return;
   }
 
-  subtitleToStatus.textContent = `Downloaded ${payload.name}.`;
+  setSubtitleToStatus(`Downloaded ${payload.name}.`);
   const videoId = subtitleToCurrentVideoId || extractYouTubeVideoId(ytUrlInput.value);
   const fileName = videoId ? `${videoId}.srt` : payload.name;
   setLoadedFile({

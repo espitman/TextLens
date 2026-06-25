@@ -81,10 +81,6 @@
             <button id="yt-fetch-btn" class="button primary">Fetch SRT</button>
           </div>
           
-          <div class="yt-settings-row">
-            <span id="subtitleto-status" class="subtitleto-status">Ready.</span>
-          </div>
-
           <webview
             id="subtitleto-webview"
             class="subtitleto-webview"
@@ -151,12 +147,23 @@
 
         <!-- Success Panel -->
         <div class="success-box" id="success-box" style="display: none;">
-          <div class="success-icon">✨</div>
-          <h2>Translation Completed Successfully!</h2>
-          <p>All subtitle blocks have been translated. You can now save the file.</p>
-          <div class="success-actions">
-            <button id="save-btn" class="button primary">Save Persian Subtitles (.srt)</button>
-            <button id="done-btn" class="button secondary">Translate Another File</button>
+          <div class="success-modal-card">
+            <div class="success-icon">✨</div>
+            <h2>Translation Completed Successfully!</h2>
+            <p>All subtitle blocks have been translated. You can now save the file.</p>
+            <div class="success-actions">
+              <button id="save-btn" class="button primary">Save Persian Subtitles (.srt)</button>
+              <button id="done-btn" class="button secondary">Translate Another File</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-dialog" id="save-dialog" style="display: none;">
+          <div class="app-dialog-card">
+            <div class="app-dialog-icon">✓</div>
+            <h2>Subtitle Saved</h2>
+            <p id="save-dialog-path"></p>
+            <button id="save-dialog-ok" class="button primary">OK</button>
           </div>
         </div>
       </div>

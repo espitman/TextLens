@@ -481,7 +481,7 @@ class MainActivity : Activity() {
         val hasChanged = cachedBindingsList == null ||
                 allBindings.size != cachedBindingsList?.size ||
                 allBindings.zip(cachedBindingsList!!).any { (a, b) ->
-                    a.fileName != b.fileName || a.mediaTitle != b.mediaTitle
+                    a.fileName != b.fileName || a.videoId != b.videoId || a.mediaTitle != b.mediaTitle
                 }
 
         if (!hasChanged) return

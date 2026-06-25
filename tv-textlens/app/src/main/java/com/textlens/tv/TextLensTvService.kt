@@ -10,6 +10,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -198,6 +199,7 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
         } else {
             SubtitleBinding(
                 fileName = fileName,
+                videoId = controller.mediaVideoId().ifBlank { extractYoutubeVideoId(fileName).orEmpty() },
                 mediaTitle = title,
                 mediaDurationMs = controller.mediaDurationMs(),
                 subtitleDurationMs = subtitleDurationMs,
@@ -263,10 +265,10 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
 
         if (controller != null) {
             val playingTitle = controller.mediaTitle()
-            if (playingTitle.isNotBlank()) {
+            val playingVideoId = controller.mediaVideoId()
+            if (playingTitle.isNotBlank() || playingVideoId.isNotBlank()) {
                 val allBindings = store.loadAllBindings()
-                val matched = allBindings
-                    .filter { it.mediaTitle.looksLikeSameVideoAs(playingTitle) }
+                val matched = allBindings.matchForController(playingTitle, playingVideoId)
                     .sortedWith(
                         compareByDescending<SubtitleBinding> { 
                             val nameLower = it.fileName.lowercase(Locale.US)
@@ -282,13 +284,14 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
                     val currentBinding = store.loadSubtitleBinding()
                     val playingDuration = controller.mediaDurationMs()
                     
-                    val titleChanged = matched.mediaTitle != playingTitle
+                    val titleChanged = playingTitle.isNotBlank() && matched.mediaTitle != playingTitle
                     val durationChanged = matched.mediaDurationMs == 0L && playingDuration > 0L
                     
                     val bindingToUse = if (titleChanged || durationChanged) {
                         val updated = SubtitleBinding(
                             fileName = matched.fileName,
-                            mediaTitle = playingTitle,
+                            videoId = matched.videoId.ifBlank { playingVideoId },
+                            mediaTitle = if (playingTitle.isNotBlank()) playingTitle else matched.mediaTitle,
                             mediaDurationMs = if (playingDuration > 0L) playingDuration else matched.mediaDurationMs,
                             subtitleDurationMs = matched.subtitleDurationMs,
                             createdAtMs = matched.createdAtMs
@@ -299,7 +302,7 @@ class TextLensTvService : Service(), TextLensWebServer.Callbacks {
                         matched
                     }
 
-                    if (currentActiveName != bindingToUse.fileName || currentBinding == null || currentBinding.mediaTitle != bindingToUse.mediaTitle || currentBinding.mediaDurationMs != bindingToUse.mediaDurationMs) {
+                    if (currentActiveName != bindingToUse.fileName || currentBinding == null || currentBinding.videoId != bindingToUse.videoId || currentBinding.mediaTitle != bindingToUse.mediaTitle || currentBinding.mediaDurationMs != bindingToUse.mediaDurationMs) {
                         store.setActiveSubtitle(bindingToUse.fileName)
                         cachedSubtitleVersion = Long.MIN_VALUE
                     }
@@ -492,6 +495,29 @@ private fun MediaController.mediaTitle(): String =
         ?: metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
         ?: ""
 
+private fun MediaController.mediaVideoId(): String {
+    val candidates = mutableListOf<String>()
+    val metadata = metadata
+    if (metadata != null) {
+        metadata.description?.mediaId?.let { candidates.add(it) }
+        metadata.description?.mediaUri?.toString()?.let { candidates.add(it) }
+        runCatching { metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) }
+            .getOrNull()
+            ?.let { candidates.add(it) }
+        runCatching { metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_URI) }
+            .getOrNull()
+            ?.let { candidates.add(it) }
+        for (key in metadata.keySet()) {
+            runCatching { metadata.getString(key) }
+                .getOrNull()
+                ?.let { candidates.add(it) }
+        }
+    }
+    playbackState?.extras?.appendStringValuesTo(candidates)
+
+    return candidates.firstNotNullOfOrNull { extractYoutubeVideoId(it) }.orEmpty()
+}
+
 private fun MediaController.mediaDurationMs(): Long =
     metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.takeIf { it > 0 } ?: 0L
 
@@ -565,10 +591,14 @@ private fun MediaController.subtitleSuppressionReason(
 
 private fun MediaController.matchesBinding(binding: SubtitleBinding, positionMs: Long): Boolean {
     val currentTitle = mediaTitle()
+    val currentVideoId = mediaVideoId()
     val currentDurationMs = mediaDurationMs()
-    if (currentTitle.isBlank()) return false
-
-    if (!currentTitle.looksLikeSameVideoAs(binding.mediaTitle)) return false
+    if (binding.videoId.isNotBlank() && currentVideoId.isNotBlank()) {
+        if (binding.videoId != currentVideoId) return false
+    } else {
+        if (currentTitle.isBlank()) return false
+        if (!currentTitle.looksLikeSameVideoAs(binding.mediaTitle)) return false
+    }
 
     if (binding.mediaDurationMs > 0 && currentDurationMs > 0) {
         val toleranceMs = maxOf(15_000L, (binding.mediaDurationMs * 0.06f).toLong())
@@ -590,6 +620,29 @@ private fun MediaController.matchesBinding(binding: SubtitleBinding, positionMs:
     return true
 }
 
+private fun List<SubtitleBinding>.matchForController(
+    playingTitle: String,
+    playingVideoId: String,
+): List<SubtitleBinding> {
+    if (playingVideoId.isNotBlank()) {
+        val byId = filter { it.videoId == playingVideoId }
+        if (byId.isNotEmpty()) return byId
+    }
+
+    if (playingTitle.isBlank()) return emptyList()
+    return filter { it.mediaTitle.looksLikeSameVideoAs(playingTitle) }
+}
+
+private fun Bundle.appendStringValuesTo(output: MutableList<String>) {
+    for (key in keySet()) {
+        when (val value = get(key)) {
+            is String -> output.add(value)
+            is CharSequence -> output.add(value.toString())
+            is Bundle -> value.appendStringValuesTo(output)
+        }
+    }
+}
+
 private fun MediaController.describe(positionMs: Long, extraLine: String? = null): String {
     val state = playbackState
     val metadata = metadata
@@ -604,6 +657,7 @@ private fun MediaController.describe(positionMs: Long, extraLine: String? = null
         "score: ${sessionScore()}",
         "state: ${state?.stateName() ?: "unknown"} speed: ${String.format(Locale.US, "%.2f", speed)}",
         "pos: ${positionMs.asClock()} / ${duration.asClock()}",
+        "videoId: ${mediaVideoId().ifBlank { "-" }}",
         "title: $title",
         extraLine,
     ).joinToString("\n")

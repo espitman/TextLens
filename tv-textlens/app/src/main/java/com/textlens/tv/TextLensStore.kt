@@ -100,6 +100,9 @@ class TextLensStore(private val context: Context) {
                 val obj = array.getJSONObject(i)
                 list.add(SubtitleBinding(
                     fileName = obj.getString("fileName"),
+                    videoId = obj.optString("videoId", "").ifBlank {
+                        extractYoutubeVideoId(obj.optString("fileName", "")).orEmpty()
+                    },
                     mediaTitle = obj.getString("mediaTitle"),
                     mediaDurationMs = obj.optLong("mediaDurationMs", 0L),
                     subtitleDurationMs = obj.optLong("subtitleDurationMs", 0L),
@@ -137,6 +140,7 @@ class TextLensStore(private val context: Context) {
         prefs.edit()
             .putString(KEY_SUBTITLE_NAME, name)
             .putString(KEY_SUBTITLE_CONTENT, content)
+            .putString(KEY_SUBTITLE_BINDING_VIDEO_ID, binding?.videoId.orEmpty())
             .putString(KEY_SUBTITLE_BINDING_TITLE, binding?.mediaTitle.orEmpty())
             .putLong(KEY_SUBTITLE_BINDING_MEDIA_DURATION, binding?.mediaDurationMs ?: 0L)
             .putLong(KEY_SUBTITLE_BINDING_SUBTITLE_DURATION, binding?.subtitleDurationMs ?: 0L)
@@ -149,6 +153,7 @@ class TextLensStore(private val context: Context) {
         prefs.edit()
             .remove(KEY_SUBTITLE_NAME)
             .remove(KEY_SUBTITLE_CONTENT)
+            .remove(KEY_SUBTITLE_BINDING_VIDEO_ID)
             .remove(KEY_SUBTITLE_BINDING_TITLE)
             .remove(KEY_SUBTITLE_BINDING_MEDIA_DURATION)
             .remove(KEY_SUBTITLE_BINDING_SUBTITLE_DURATION)
@@ -165,6 +170,10 @@ class TextLensStore(private val context: Context) {
 
     fun loadSubtitleBinding(): SubtitleBinding? {
         val fileName = loadSubtitleName()
+        val storedBinding = loadAllBindings().firstOrNull { it.fileName == fileName }
+        val videoId = prefs.getString(KEY_SUBTITLE_BINDING_VIDEO_ID, "").orEmpty()
+            .ifBlank { storedBinding?.videoId.orEmpty() }
+            .ifBlank { extractYoutubeVideoId(fileName).orEmpty() }
         val title = prefs.getString(KEY_SUBTITLE_BINDING_TITLE, "").orEmpty()
         val mediaDurationMs = prefs.getLong(KEY_SUBTITLE_BINDING_MEDIA_DURATION, 0L)
         val subtitleDurationMs = prefs.getLong(KEY_SUBTITLE_BINDING_SUBTITLE_DURATION, 0L)
@@ -172,6 +181,7 @@ class TextLensStore(private val context: Context) {
         if (fileName.isBlank() || title.isBlank() || createdAtMs <= 0L) return null
         return SubtitleBinding(
             fileName = fileName,
+            videoId = videoId,
             mediaTitle = title,
             mediaDurationMs = mediaDurationMs,
             subtitleDurationMs = subtitleDurationMs,
@@ -218,6 +228,7 @@ class TextLensStore(private val context: Context) {
         private const val KEY_SUBTITLE_NAME = "subtitle_name"
         private const val KEY_SUBTITLE_CONTENT = "subtitle_content"
         private const val KEY_SUBTITLE_UPDATED_AT = "subtitle_updated_at"
+        private const val KEY_SUBTITLE_BINDING_VIDEO_ID = "subtitle_binding_video_id"
         private const val KEY_SUBTITLE_BINDING_TITLE = "subtitle_binding_title"
         private const val KEY_SUBTITLE_BINDING_MEDIA_DURATION = "subtitle_binding_media_duration"
         private const val KEY_SUBTITLE_BINDING_SUBTITLE_DURATION = "subtitle_binding_subtitle_duration"
@@ -230,6 +241,7 @@ class TextLensStore(private val context: Context) {
 fun SubtitleBinding.toJson(): JSONObject =
     JSONObject()
         .put("fileName", fileName)
+        .put("videoId", videoId)
         .put("mediaTitle", mediaTitle)
         .put("mediaDurationMs", mediaDurationMs)
         .put("subtitleDurationMs", subtitleDurationMs)

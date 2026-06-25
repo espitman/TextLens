@@ -35,12 +35,6 @@ class TextLensWebServer(
         fun currentSubtitleBinding(fileName: String, subtitleDurationMs: Long): SubtitleBinding?
     }
 
-    private fun extractVideoId(name: String): String? {
-        val regex = Regex("([a-zA-Z0-9_-]{11})")
-        val match = regex.find(name)
-        return match?.groupValues?.get(1)
-    }
-
     private fun fetchYoutubeTitle(videoId: String): String? {
         var connection: HttpURLConnection? = null
         try {
@@ -101,18 +95,20 @@ class TextLensWebServer(
                         }
 
                         val subtitleDurationMs = cues.lastOrNull()?.endMs ?: 0L
-                        val videoId = extractVideoId(name)
+                        val videoId = payload.optString("videoId", "")
+                            .ifBlank { extractYoutubeVideoId(name).orEmpty() }
                         var binding: SubtitleBinding? = null
 
                         if (clientYoutubeTitle.isNotBlank()) {
                             binding = SubtitleBinding(
                                 fileName = name,
+                                videoId = videoId,
                                 mediaTitle = clientYoutubeTitle,
                                 mediaDurationMs = 0L,
                                 subtitleDurationMs = subtitleDurationMs,
                                 createdAtMs = System.currentTimeMillis()
                             )
-                        } else if (videoId != null) {
+                        } else if (videoId.isNotBlank()) {
                             val title = withContext(Dispatchers.IO) {
                                 fetchYoutubeTitle(videoId)
                             }
@@ -124,6 +120,7 @@ class TextLensWebServer(
 
                             binding = SubtitleBinding(
                                 fileName = name,
+                                videoId = videoId,
                                 mediaTitle = titleToUse,
                                 mediaDurationMs = 0L,
                                 subtitleDurationMs = subtitleDurationMs,
@@ -144,6 +141,7 @@ class TextLensWebServer(
                                 val titleToUse = if (cleanTitle.isBlank()) "Uploaded Subtitle" else cleanTitle
                                 binding = SubtitleBinding(
                                     fileName = name,
+                                    videoId = extractYoutubeVideoId(name).orEmpty(),
                                     mediaTitle = titleToUse,
                                     mediaDurationMs = 0L,
                                     subtitleDurationMs = subtitleDurationMs,
