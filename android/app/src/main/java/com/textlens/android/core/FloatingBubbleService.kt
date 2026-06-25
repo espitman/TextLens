@@ -1,5 +1,8 @@
 package com.textlens.android.core
 
+import android.animation.ValueAnimator
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -16,8 +19,11 @@ import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.VelocityTracker
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -38,6 +44,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 class FloatingBubbleService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -52,6 +60,7 @@ class FloatingBubbleService : Service() {
     private val translationClient by lazy { OpenAiCompatibleTranslationClient() }
     private var lastArea: ScreenArea? = null
     private var lastTranslation: TranslationOutput? = null
+    private var bubbleMoveAnimator: ValueAnimator? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -76,6 +85,7 @@ class FloatingBubbleService : Service() {
         removeBubble()
         removeSelection()
         removePopup()
+        bubbleMoveAnimator?.cancel()
         scope.cancel()
         super.onDestroy()
     }
@@ -109,32 +119,77 @@ class FloatingBubbleService : Service() {
         var downRawX = 0f
         var downRawY = 0f
         var downTime = 0L
+        var hasMoved = false
+        var moveUpdateScheduled = false
+        var velocityTracker: VelocityTracker? = null
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+
+        fun updateBubblePosition(x: Float, y: Float) {
+            val maxX = (resources.displayMetrics.widthPixels - view.width).coerceAtLeast(0)
+            val maxY = (resources.displayMetrics.heightPixels - view.height).coerceAtLeast(0)
+            params.x = x.roundToInt().coerceIn(0, maxX)
+            params.y = y.roundToInt().coerceIn(0, maxY)
+
+            if (moveUpdateScheduled) return
+            moveUpdateScheduled = true
+            view.postOnAnimation {
+                moveUpdateScheduled = false
+                if (bubbleView === view) {
+                    runCatching { windowManager.updateViewLayout(view, params) }
+                }
+            }
+        }
 
         view.setOnTouchListener { _, event ->
+            velocityTracker?.addMovement(event)
+
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    bubbleMoveAnimator?.cancel()
                     startX = params.x
                     startY = params.y
                     downRawX = event.rawX
                     downRawY = event.rawY
                     downTime = System.currentTimeMillis()
+                    hasMoved = false
+                    velocityTracker = VelocityTracker.obtain().also { it.addMovement(event) }
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = startX + (event.rawX - downRawX).toInt()
-                    params.y = startY + (event.rawY - downRawY).toInt()
-                    windowManager.updateViewLayout(view, params)
+                    val dx = event.rawX - downRawX
+                    val dy = event.rawY - downRawY
+                    if (!hasMoved && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
+                        hasMoved = true
+                    }
+                    if (hasMoved) {
+                        updateBubblePosition(startX + dx, startY + dy)
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val moved = abs(event.rawX - downRawX) > 12 || abs(event.rawY - downRawY) > 12
-                    val longPress = !moved && System.currentTimeMillis() - downTime > 520
+                    val longPress = !hasMoved && System.currentTimeMillis() - downTime > 520
                     if (longPress) {
                         openSettings()
-                    } else if (!moved) {
+                    } else if (!hasMoved) {
                         handleBubbleTap()
                     } else {
-                        saveBubblePosition(params)
+                        velocityTracker?.computeCurrentVelocity(1000)
+                        settleBubble(
+                            view = view,
+                            params = params,
+                            velocityX = velocityTracker?.xVelocity ?: 0f,
+                            velocityY = velocityTracker?.yVelocity ?: 0f,
+                        )
+                    }
+                    velocityTracker?.recycle()
+                    velocityTracker = null
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    velocityTracker?.recycle()
+                    velocityTracker = null
+                    if (hasMoved) {
+                        settleBubble(view, params, velocityX = 0f, velocityY = 0f)
                     }
                     true
                 }
@@ -154,11 +209,51 @@ class FloatingBubbleService : Service() {
         startSelection()
     }
 
-    private fun snapBubble(view: View, params: WindowManager.LayoutParams) {
+    private fun settleBubble(
+        view: View,
+        params: WindowManager.LayoutParams,
+        velocityX: Float,
+        velocityY: Float,
+    ) {
+        val flingSpeed = hypot(velocityX, velocityY)
+        if (flingSpeed < MIN_BUBBLE_FLING_SPEED) {
+            saveBubblePosition(params)
+            return
+        }
+
         val width = resources.displayMetrics.widthPixels
-        params.x = if (params.x < width / 2) dp(12) else width - dp(58)
-        saveBubblePosition(params)
-        windowManager.updateViewLayout(view, params)
+        val height = resources.displayMetrics.heightPixels
+        val maxX = (width - view.width).coerceAtLeast(0)
+        val maxY = (height - view.height).coerceAtLeast(0)
+        val startX = params.x
+        val startY = params.y
+        val projectedX = startX + velocityX * 0.12f
+        val targetX = if (projectedX < width / 2f) dp(12) else (maxX - dp(12)).coerceAtLeast(0)
+        val targetY = (startY + velocityY * 0.08f).roundToInt().coerceIn(dp(12), (maxY - dp(12)).coerceAtLeast(dp(12)))
+        val distance = hypot((targetX - startX).toFloat(), (targetY - startY).toFloat())
+        val duration = (180 + distance * 0.28f).roundToInt().coerceIn(180, 360).toLong()
+
+        bubbleMoveAnimator?.cancel()
+        bubbleMoveAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            interpolator = DecelerateInterpolator(1.8f)
+            this.duration = duration
+            addUpdateListener { animator ->
+                val progress = animator.animatedFraction
+                params.x = (startX + (targetX - startX) * progress).roundToInt()
+                params.y = (startY + (targetY - startY) * progress).roundToInt()
+                if (bubbleView === view) {
+                    runCatching { windowManager.updateViewLayout(view, params) }
+                }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    params.x = targetX
+                    params.y = targetY
+                    saveBubblePosition(params)
+                }
+            })
+            start()
+        }
     }
 
     private fun saveBubblePosition(params: WindowManager.LayoutParams) {
@@ -390,5 +485,6 @@ class FloatingBubbleService : Service() {
     private companion object {
         const val NOTIFICATION_ID = 3108
         const val ACTION_STOP = "com.textlens.android.STOP_BUBBLE"
+        const val MIN_BUBBLE_FLING_SPEED = 1400f
     }
 }
