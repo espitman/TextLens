@@ -13,6 +13,8 @@ TextLens/
   tv-textlens/   Android TV subtitle overlay app
   youtube-textlens-chrome/
                  Chrome extension for rendering local SRT on YouTube
+  youtube-textlens-translator/
+                 macOS helper app for translating SRT files
   docs/          product specs and implementation plans
   site/          GitHub Pages landing page
   scripts/       release and packaging scripts
@@ -139,6 +141,33 @@ Release guide:
 - [TextLens YouTube Chrome README](youtube-textlens-chrome/README.md)
 - [Chrome experimental release guide](docs/chrome_EXPERIMENTAL_RELEASE.md)
 
+## YouTube TextLens Translator
+
+The macOS desktop helper for translating SRT files lives in:
+
+```text
+youtube-textlens-translator
+```
+
+It packages as a ready-to-run macOS DMG, so end users do not need `npm install`, Node.js, or a build step.
+
+Package it for GitHub release with:
+
+```sh
+./scripts/package_youtube_translator_macos.sh
+```
+
+The DMG is written to:
+
+```text
+dist/YouTube-TextLens-Translator-0.1.0-macOS.dmg
+```
+
+Release guide:
+
+- [YouTube TextLens Translator README](youtube-textlens-translator/README.md)
+- [YouTube TextLens Translator experimental release guide](docs/youtube_TRANSLATOR_EXPERIMENTAL_RELEASE.md)
+
 ## Latest Release
 
 - [Download TextLens](https://github.com/espitman/TextLens/releases/latest)
@@ -161,3 +190,4 @@ It is deployed by `.github/workflows/pages.yml`.
 - [Android TODO](docs/ANDROID_TODO.md)
 - [TV experimental release guide](docs/tv_EXPERIMENTAL_RELEASE.md)
 - [Chrome experimental release guide](docs/chrome_EXPERIMENTAL_RELEASE.md)
+- [YouTube TextLens Translator experimental release guide](docs/youtube_TRANSLATOR_EXPERIMENTAL_RELEASE.md)
