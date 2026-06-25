@@ -11,6 +11,8 @@ TextLens/
   android/       Android app implementation
   macos/         macOS app implementation
   tv-textlens/   Android TV subtitle overlay app
+  youtube-textlens-chrome/
+                 Chrome extension for rendering local SRT on YouTube
   docs/          product specs and implementation plans
   site/          GitHub Pages landing page
   scripts/       release and packaging scripts
@@ -110,6 +112,33 @@ Release guide:
 - [TextLens TV README](tv-textlens/README.md)
 - [TV experimental release guide](docs/tv_EXPERIMENTAL_RELEASE.md)
 
+## TextLens YouTube Chrome
+
+The Chrome extension lives in:
+
+```text
+youtube-textlens-chrome
+```
+
+It renders local `.srt` subtitles over the YouTube player. It does not require `npm install`, a build step, a backend, or Chrome Web Store distribution.
+
+Package the extension for GitHub release with:
+
+```sh
+./scripts/package_chrome_extension.sh
+```
+
+The zip is written to:
+
+```text
+dist/TextLens-YouTube-Chrome-0.1.0.zip
+```
+
+Release guide:
+
+- [TextLens YouTube Chrome README](youtube-textlens-chrome/README.md)
+- [Chrome experimental release guide](docs/chrome_EXPERIMENTAL_RELEASE.md)
+
 ## Latest Release
 
 - [Download TextLens](https://github.com/espitman/TextLens/releases/latest)
@@ -131,3 +160,4 @@ It is deployed by `.github/workflows/pages.yml`.
 - [macOS experimental release guide](docs/macos_EXPERIMENTAL_RELEASE.md)
 - [Android TODO](docs/ANDROID_TODO.md)
 - [TV experimental release guide](docs/tv_EXPERIMENTAL_RELEASE.md)
+- [Chrome experimental release guide](docs/chrome_EXPERIMENTAL_RELEASE.md)
