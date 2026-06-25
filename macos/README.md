@@ -1,76 +1,181 @@
 # TextLens macOS
 
-TextLens is a macOS menu bar app for translating text from a selected area of the screen into Persian.
+TextLens for macOS is a menu bar screen-translation app. Press the global shortcut, select an area of the screen, and TextLens captures that area, reads the text with Apple Vision OCR, translates it through an OpenAI-compatible API, and shows the Persian result in a floating popup.
 
-The MVP focuses only on partial translation: the user selects an area, TextLens captures that area, extracts English text with OCR, sends the text to an OpenAI-compatible translation API, and shows the Persian result in a small popup.
+This build is an experimental GitHub release. It is intentionally unsigned/not notarized because it does not require an Apple Developer account.
+
+## Features
+
+- Menu bar app with a compact `T` icon.
+- Global shortcut: `Command + Shift + 0`.
+- Screenshot area selection overlay.
+- Screen capture and OCR through native macOS APIs.
+- Persian translation popup with RTL rendering.
+- Translation history for the last items.
+- Provider settings for:
+  - OpenRouter
+  - Liara
+- Model picker with custom model support.
+- Retry flow with model switching.
+- No analytics or telemetry.
 
 ## Requirements
 
-- macOS 13 or later
-- Xcode 15 or later
-- Swift 5.9 or later
-- Screen Recording permission
-- An OpenAI-compatible API key
+- macOS 13 or newer.
+- Screen Recording permission.
+- Your own OpenAI-compatible API key.
+- Internet access for translation requests.
 
-## Build and Run
+## Install The Experimental DMG
 
-The macOS app is currently scaffolded as a Swift Package executable that can be opened in Xcode from this directory.
+1. Download `TextLens-0.1.0.dmg` from the GitHub release.
+2. Open the DMG.
+3. Drag `TextLens.app` into `Applications`.
+4. Open `Applications`.
+5. Right-click `TextLens.app` and choose **Open**.
+6. Confirm the macOS warning.
 
-```sh
-open Package.swift
-```
+Because this experimental release is not notarized, double-clicking the app may show a security warning. Use right-click -> **Open** the first time.
 
-You can also build from the command line:
+If macOS still blocks the app:
 
-```sh
-swift build
-```
+1. Open **System Settings**.
+2. Go to **Privacy & Security**.
+3. Scroll to the security warning.
+4. Click **Open Anyway**.
+5. Run TextLens again.
+
+## First Run
+
+1. Launch TextLens.
+2. Click the `T` icon in the menu bar.
+3. Open **Settings**.
+4. Select a provider:
+   - `OpenRouter`
+   - `Liara`
+5. Paste your API key.
+6. Confirm the base URL and model.
+7. Save settings.
+8. Grant Screen Recording permission when prompted.
 
 ## Screen Recording Permission
 
-TextLens needs Screen Recording permission to read text from the selected area of your screen.
+TextLens needs Screen Recording permission to read pixels from the selected screen area. Without this permission it cannot OCR the selected region.
 
-When the permission flow is implemented, grant access in:
+Grant it in:
 
 ```text
 System Settings -> Privacy & Security -> Screen Recording
 ```
 
-## API Key Setup
+Enable `TextLens`, then quit and reopen the app.
 
-TextLens defaults to Liara's OpenAI-compatible Chat API.
+If the app does not appear in the Screen Recording list:
 
-The settings are:
+1. Quit TextLens.
+2. Open TextLens again from `/Applications`.
+3. Trigger a translation once.
+4. Reopen Screen Recording settings.
 
-- API Key
-- Base URL, defaulting to `https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1`
-- Model, defaulting to `openai/gpt-4.1-mini`
-- Target language, defaulting to `Persian`
+If permission gets stuck after replacing the app:
 
-## Default Shortcut
+1. Remove TextLens from Screen Recording.
+2. Quit TextLens.
+3. Reopen `/Applications/TextLens.app`.
+4. Grant Screen Recording again.
 
-The planned default shortcut is:
+## Usage
+
+Use either method:
+
+- Press `Command + Shift + 0`.
+- Click the menu bar `T` icon and choose the translate action.
+
+Then:
+
+1. Drag over the text area.
+2. Release the mouse.
+3. Wait for OCR and translation.
+4. Read the Persian result in the popup.
+5. Copy, close, retry, or switch model if needed.
+
+## Provider Defaults
+
+OpenRouter:
 
 ```text
-Command + Shift + 0
+Base URL: https://openrouter.ai/api/v1
+Default model: google/gemma-4-31b-it:free
 ```
 
-## MVP Limitations
+Liara:
 
-- Only partial area translation is in scope.
-- The first version targets English OCR to Persian translation.
-- Multi-display support may be limited at first.
-- API Key storage starts with `UserDefaults`; Keychain storage is deferred.
-- Screenshots, OCR text, and translations must not be written to disk.
-- No telemetry or analytics should be added.
+```text
+Base URL: https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1
+Default model: openai/gpt-5-nano
+```
 
-## Next TODOs
+Target language:
 
-- Implement the menu bar shell.
-- Add global hotkey support.
-- Build the area selection overlay.
-- Capture and crop the selected screen area.
-- Add Vision OCR.
-- Add Settings persistence.
-- Add the OpenAI-compatible translation client.
-- Show the translated result in a popup.
+```text
+Persian
+```
+
+## Privacy
+
+TextLens processes the selected screen area locally for capture and OCR, then sends the recognized text to the selected translation provider.
+
+TextLens does not add analytics or telemetry.
+
+Current experimental limitation:
+
+- API keys are stored in macOS `UserDefaults`.
+- For a production-grade public build, API keys should move to Keychain.
+
+## Known Limitations
+
+- This is an experimental, unsigned GitHub release.
+- macOS may show security warnings on first launch.
+- Screen Recording permission can require quitting and reopening the app.
+- OCR quality depends on the selected area, font, contrast, and language.
+- Multi-display behavior may vary depending on macOS display arrangement.
+- Translation quality and cost depend on the selected provider and model.
+
+## Build Locally
+
+From the repository root:
+
+```sh
+./scripts/build-dmg.sh 0.1.0
+```
+
+The DMG is created at:
+
+```text
+dist/TextLens-0.1.0.dmg
+```
+
+For local development:
+
+```sh
+cd macos
+swift build
+```
+
+To install and run a local app bundle from the repository root:
+
+```sh
+./run
+```
+
+## Release Type
+
+This macOS build is distributed as:
+
+```text
+Experimental GitHub release
+Unsigned / not notarized
+Bring your own API key
+```
+
+It is suitable for technical users who are comfortable opening unsigned macOS apps from GitHub.

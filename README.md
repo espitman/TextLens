@@ -1,8 +1,8 @@
 # TextLens
 
-TextLens is a cross-platform project for translating text from selected screen areas into Persian.
+TextLens is a cross-platform toolkit for translating text and subtitles into Persian.
 
-The first implementation target is macOS. Android and other platforms are planned for later.
+The macOS app is available as an experimental GitHub release. It runs as a menu bar app: press `Command + Shift + 0`, select an area of the screen, and TextLens reads the text with OCR and shows a Persian translation popup.
 
 ## Repository Structure
 
@@ -15,28 +15,45 @@ TextLens/
   scripts/       release and packaging scripts
 ```
 
-## Current App
+## TextLens macOS
 
-The macOS app is scaffolded in:
+The macOS app lives in:
 
 ```text
 macos
 ```
 
-Build it with:
+Build it locally with:
 
 ```sh
 cd macos
 swift build
 ```
 
-Build, install, and run it from the repository root with:
+Build, install, and run it locally from the repository root with:
 
 ```sh
 ./run
 ```
 
 The script creates `/Applications/TextLens.app` and opens it. This gives macOS a stable app identity for Screen Recording permission.
+
+Create an experimental DMG release with:
+
+```sh
+./scripts/build-dmg.sh 0.1.0
+```
+
+The DMG is written to:
+
+```text
+dist/TextLens-0.1.0.dmg
+```
+
+Release guide:
+
+- [macOS experimental release guide](docs/macos_EXPERIMENTAL_RELEASE.md)
+- [macOS app README](macos/README.md)
 
 ## Android App
 
@@ -65,17 +82,7 @@ Build an unsigned release APK with:
 ./scripts/android_release.sh
 ```
 
-## Release Build
-
-Create a distributable macOS DMG with:
-
-```sh
-./scripts/build-dmg.sh 0.1.0
-```
-
-The DMG is written to `dist/TextLens-0.1.0.dmg`.
-
-Latest release:
+## Latest Release
 
 - [Download TextLens](https://github.com/espitman/TextLens/releases/latest)
 
@@ -93,4 +100,5 @@ It is deployed by `.github/workflows/pages.yml`.
 
 - [Implementation spec](docs/TextLens_Codex_Spec.md)
 - [macOS MVP TODO](docs/macos_TODO.md)
+- [macOS experimental release guide](docs/macos_EXPERIMENTAL_RELEASE.md)
 - [Android TODO](docs/ANDROID_TODO.md)
