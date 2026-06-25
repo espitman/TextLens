@@ -135,10 +135,6 @@ class FloatingBubbleService : Service() {
                         handleBubbleTap()
                     } else {
                         saveBubblePosition(params)
-                        startSelection(
-                            initialCenterX = params.x + view.width / 2f,
-                            initialCenterY = params.y + view.height / 2f,
-                        )
                     }
                     true
                 }
