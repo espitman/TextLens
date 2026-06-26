@@ -3,122 +3,164 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TextLens - Screen OCR Translation for macOS</title>
+    <title>TextLens - Persian translation products for screens and video</title>
     <meta
       name="description"
-      content="TextLens translates selected screen areas into Persian with OCR, menu bar controls, OpenRouter and Liara support, and a compact macOS popup."
+      content="TextLens is a family of Persian translation products for screen text, Android floating OCR, YouTube subtitles, and Android TV subtitle overlays."
     />
-    <meta property="og:title" content="TextLens" />
-    <meta property="og:description" content="Select any area on your Mac screen and translate it into Persian." />
+    <meta property="og:title" content="TextLens Product Hub" />
+    <meta property="og:description" content="A black and gold product suite for Persian translation across macOS, Android, Chrome, and TV." />
     <meta property="og:type" content="website" />
     <link rel="icon" href="assets/textlens-icon.svg" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="site-glow"></div>
     <nav class="nav">
       <div class="shell nav-inner">
-        <a class="brand" href="#">
+        <a class="brand" href="index.html" aria-label="TextLens home">
           <img src="assets/textlens-icon.svg" alt="" />
           <span>TextLens</span>
         </a>
         <div class="nav-links">
-          <a href="#features">Features</a>
-          <a href="#install">Install</a>
-          <a class="button secondary" href="https://github.com/espitman/TextLens">GitHub</a>
+          <a href="#products" data-en="Products" data-fa="محصولات">Products</a>
+          <a href="#business" data-en="Business" data-fa="ارزش تجاری">Business</a>
+          <a href="https://github.com/espitman/TextLens" data-en="GitHub" data-fa="گیت‌هاب">GitHub</a>
+          <button class="lang-toggle" type="button" data-lang-toggle>FA</button>
         </div>
       </div>
     </nav>
 
     <main>
-      <section class="shell hero">
-        <div>
-          <span class="eyebrow">macOS menu bar translator</span>
-          <h1>TextLens</h1>
-          <p class="hero-copy">
-            Select a piece of your screen, let TextLens read it with OCR, and get a Persian translation in a fast,
-            draggable popup built for day-to-day reading.
+      <section class="shell hero hub-hero">
+        <div class="hero-copy-block reveal">
+          <span class="eyebrow" data-en="Translation infrastructure for Persian readers" data-fa="زیرساخت ترجمه برای فارسی‌زبان‌ها">Translation infrastructure for Persian readers</span>
+          <h1>
+            <span class="lang lang-en title-lines"><span>Read anything.</span><span>Translate</span><span>everywhere.</span></span>
+            <span class="lang lang-fa title-lines"><span>هر جا بخوان.</span><span>همه‌جا</span><span>ترجمه کن.</span></span>
+          </h1>
+          <p class="hero-copy lang lang-en">
+            TextLens turns hard-to-copy screen text, YouTube videos, and TV playback into readable Persian experiences. Each product solves one painful reading moment, and together they form a practical translation stack.
+          </p>
+          <p class="hero-copy lang lang-fa">
+            TextLens متن‌های سخت‌کپی، ویدیوهای یوتیوب و پخش تلویزیون را به تجربه‌ای قابل خواندن به فارسی تبدیل می‌کند. هر محصول یک نیاز واقعی را حل می‌کند و کنار هم یک مجموعه کاربردی برای ترجمه می‌سازند.
           </p>
           <div class="actions">
-            <a class="button primary" href="https://github.com/espitman/TextLens/releases/latest">Download DMG</a>
-            <a class="button secondary" href="#install">How it works</a>
+            <a class="button primary" href="#products" data-en="Explore products" data-fa="مشاهده محصولات">Explore products</a>
+            <a class="button secondary" href="https://github.com/espitman/TextLens/releases" data-en="Download releases" data-fa="دانلود ریلیزها">Download releases</a>
           </div>
         </div>
 
-        <div class="hero-visual" aria-label="TextLens app preview">
-          <div class="desktop-frame">
-            <div class="screen-bar">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
-            </div>
-            <div class="article">
-              <h2>Selected article text</h2>
-              <p>
-                TextLens sits quietly in the menu bar. Press the shortcut, drag over any readable area, and keep
-                working while OCR and translation run.
-              </p>
-              <p>
-                It is designed for screenshots, web pages, PDFs, presentations, and any app where text cannot be
-                copied directly.
-              </p>
-              <p>
-                Provider settings are available from the popover with separate OpenRouter and Liara profiles.
-              </p>
-            </div>
-            <div class="selection"></div>
+        <div class="suite-visual reveal" aria-label="TextLens product suite preview">
+          <div class="orbit-card macos-card">
+            <span>macOS</span>
+            <strong>OCR popup</strong>
           </div>
-
-          <div class="popup">
-            <div class="popup-head">
-              <div class="popup-title">
-                <img src="assets/textlens-icon.svg" alt="" />
-                <span>TextLens</span>
-              </div>
-              <strong class="persian">ترجمه</strong>
-            </div>
-            <div class="translation-card persian">
-              متن انتخاب شده از صفحه خوانده می‌شود و ترجمه فارسی آن در یک پنجره کوچک، راست‌چین و قابل جابه‌جایی نمایش داده می‌شود.
-            </div>
-            <span class="cost persian">هزینه: ۱۲ تومان</span>
+          <div class="orbit-card android-card">
+            <span>Android</span>
+            <strong>Floating lens</strong>
+          </div>
+          <div class="orbit-card tv-card">
+            <span>TV</span>
+            <strong>SRT overlay</strong>
+          </div>
+          <div class="core-mark">
+            <img src="assets/textlens-icon.svg" alt="" />
+            <b>TextLens</b>
           </div>
         </div>
       </section>
 
-      <section id="features" class="shell features">
-        <article class="feature">
-          <b>Area selection</b>
-          <p>Use the global shortcut to draw over exactly the text you want, with a custom TextLens cursor.</p>
-        </article>
-        <article class="feature">
-          <b>Persian-first popup</b>
-          <p>Translations open instantly in a compact RTL popup with copy, retry, cost badge, and drag support.</p>
-        </article>
-        <article class="feature">
-          <b>Provider control</b>
-          <p>Switch between OpenRouter and Liara, choose the model, and retry failed translations without reopening settings.</p>
-        </article>
+      <section id="products" class="shell section">
+        <div class="section-head reveal">
+          <span class="eyebrow" data-en="Product suite" data-fa="مجموعه محصولات">Product suite</span>
+          <h2>
+            <span class="lang lang-en">One brand, five launchable products.</span>
+            <span class="lang lang-fa">یک برند، پنج محصول آماده عرضه.</span>
+          </h2>
+          <p class="lang lang-en">
+            The suite covers personal reading, mobile screen translation, YouTube watching, subtitle preparation, and living-room playback.
+          </p>
+          <p class="lang lang-fa">
+            این مجموعه خواندن شخصی، ترجمه صفحه موبایل، تماشای یوتیوب، آماده‌سازی زیرنویس و پخش روی تلویزیون را پوشش می‌دهد.
+          </p>
+        </div>
+
+        <div class="product-grid">
+          <a class="product-card reveal" href="macos.html">
+            <span class="product-icon">M</span>
+            <small>TextLens macOS</small>
+            <h3 data-en="Instant screen translation for Mac" data-fa="ترجمه فوری صفحه روی مک">Instant screen translation for Mac</h3>
+            <p class="lang lang-en">A menu bar app for selecting any screen area and reading Persian translation in a polished popup.</p>
+            <p class="lang lang-fa">اپ منوبار برای انتخاب هر بخش از صفحه و خواندن ترجمه فارسی در یک پاپ‌آپ شیک.</p>
+          </a>
+
+          <a class="product-card reveal" href="android.html">
+            <span class="product-icon">A</span>
+            <small>TextLens Android</small>
+            <h3 data-en="Floating OCR for Android apps" data-fa="OCR شناور برای اپ‌های اندروید">Floating OCR for Android apps</h3>
+            <p class="lang lang-en">A movable bubble that lets users translate visible text without leaving the current app.</p>
+            <p class="lang lang-fa">یک بابل شناور که بدون خروج از اپ فعلی، متن روی صفحه را ترجمه می‌کند.</p>
+          </a>
+
+          <a class="product-card reveal" href="tv.html">
+            <span class="product-icon">TV</span>
+            <small>TextLens TV</small>
+            <h3 data-en="Subtitle control for Android TV" data-fa="کنترل زیرنویس برای Android TV">Subtitle control for Android TV</h3>
+            <p class="lang lang-en">A TV overlay and web control panel for rendering translated SRT files over YouTube playback.</p>
+            <p class="lang lang-fa">اورلی تلویزیون و پنل وب برای نمایش زیرنویس ترجمه‌شده روی پخش یوتیوب.</p>
+          </a>
+
+          <a class="product-card reveal" href="youtube-chrome.html">
+            <span class="product-icon">YT</span>
+            <small>TextLens YouTube Chrome</small>
+            <h3 data-en="Custom subtitles inside YouTube" data-fa="زیرنویس سفارشی داخل یوتیوب">Custom subtitles inside YouTube</h3>
+            <p class="lang lang-en">A Chrome extension for loading SRT files and rendering them directly on YouTube pages.</p>
+            <p class="lang lang-fa">اکستنشن کروم برای لود فایل SRT و نمایش مستقیم آن روی صفحات یوتیوب.</p>
+          </a>
+
+          <a class="product-card reveal" href="translator.html">
+            <span class="product-icon">SRT</span>
+            <small>YouTube TextLens Translator</small>
+            <h3 data-en="Persian SRT production desk" data-fa="میز تولید زیرنویس فارسی">Persian SRT production desk</h3>
+            <p class="lang lang-en">A desktop helper for preparing Persian subtitle files with OpenRouter or Liara.</p>
+            <p class="lang lang-fa">ابزار دسکتاپ برای آماده‌سازی فایل زیرنویس فارسی با OpenRouter یا Liara.</p>
+          </a>
+        </div>
       </section>
 
-      <section id="install" class="install">
-        <div class="shell install-panel">
-          <div>
-            <h2>Install on macOS</h2>
-            <p>
-              Download the latest DMG, drag TextLens into Applications, grant Screen Recording permission, then use
-              Command + Shift + 0 from anywhere.
-            </p>
+      <section id="business" class="business-band">
+        <div class="shell business-grid">
+          <div class="section-head reveal">
+            <span class="eyebrow" data-en="Why it matters" data-fa="چرا مهم است">Why it matters</span>
+            <h2>
+              <span class="lang lang-en">Built around real consumption habits.</span>
+              <span class="lang lang-fa">ساخته‌شده بر اساس عادت واقعی مصرف محتوا.</span>
+            </h2>
           </div>
-          <ol class="steps">
-            <li>Open the DMG and move TextLens to Applications.</li>
-            <li>Open TextLens from the menu bar and configure an API provider.</li>
-            <li>Press Command + Shift + 0, select text on screen, and translate.</li>
-          </ol>
+          <div class="metric-card reveal">
+            <strong>1</strong>
+            <span data-en="Brand system across desktop, mobile, browser, and TV" data-fa="یک سیستم برند در دسکتاپ، موبایل، مرورگر و تلویزیون">Brand system across desktop, mobile, browser, and TV</span>
+          </div>
+          <div class="metric-card reveal">
+            <strong>5</strong>
+            <span data-en="Launchable surfaces with separate release artifacts" data-fa="پنج سطح قابل عرضه با فایل ریلیز مستقل">Launchable surfaces with separate release artifacts</span>
+          </div>
+          <div class="metric-card reveal">
+            <strong>0</strong>
+            <span data-en="Backend dependency for end-user subtitle rendering flows" data-fa="وابستگی بک‌اند برای مسیرهای نمایش زیرنویس کاربر">Backend dependency for end-user subtitle rendering flows</span>
+          </div>
         </div>
       </section>
     </main>
 
-    <footer>
-      <div class="shell">TextLens is an early macOS release. Android and more platforms are planned later.</div>
+    <footer class="footer">
+      <div class="shell footer-inner">
+        <span>TextLens</span>
+        <a href="https://github.com/espitman/TextLens" data-en="GitHub repository" data-fa="مخزن گیت‌هاب">GitHub repository</a>
+      </div>
     </footer>
+
+    <script src="script.js"></script>
   </body>
 </html>
