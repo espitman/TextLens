@@ -37,6 +37,10 @@ tv-textlens/local.properties
 tv-textlens/*.jks
 tv-textlens/*.keystore
 tv-textlens/keystores/
+youtube-textlens-translator-android/local.properties
+youtube-textlens-translator-android/*.jks
+youtube-textlens-translator-android/*.keystore
+youtube-textlens-translator-android/keystores/
 
 # Node
 node_modules/
