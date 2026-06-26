@@ -62,7 +62,7 @@ if [ ! -f "$APK_PATH" ]; then
   exit 1
 fi
 
-OUT_NAME="youtube-textlens-translator-android-0.1.0-release.apk"
+OUT_NAME="youtube-textlens-translator-android-0.1.1-release.apk"
 cp "$APK_PATH" "$DESKTOP_DIR/$OUT_NAME"
 cp "$APK_PATH" "$DIST_DIR/$OUT_NAME"
 
