@@ -28,6 +28,57 @@
     });
   });
 
+  const transitionMs = 240;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function isInternalPageLink(link) {
+    const href = link.getAttribute("href");
+
+    if (
+      !href ||
+      href.startsWith("#") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:") ||
+      link.target === "_blank" ||
+      link.hasAttribute("download")
+    ) {
+      return false;
+    }
+
+    const url = new URL(href, window.location.href);
+    const current = new URL(window.location.href);
+    const sameOrigin = url.origin === current.origin;
+    const samePath = url.pathname === current.pathname;
+    const onlyHashChange = sameOrigin && samePath && url.hash && url.hash !== current.hash;
+    const isHtmlPage = url.pathname.endsWith("/") || url.pathname.endsWith(".html");
+
+    return sameOrigin && isHtmlPage && !onlyHashChange;
+  }
+
+  document.querySelectorAll("a[href]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        event.button !== 0 ||
+        reduceMotion ||
+        !isInternalPageLink(link)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      document.body.classList.add("is-page-leaving");
+
+      window.setTimeout(() => {
+        window.location.href = link.href;
+      }, transitionMs);
+    });
+  });
+
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
