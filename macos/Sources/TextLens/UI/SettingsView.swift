@@ -60,7 +60,7 @@ struct SettingsView: View {
                 settingsCard
                 actionCard
                 statusCard
-                historyCarousel
+                historySection
             } else {
                 permissionErrorCard
             }
@@ -113,7 +113,7 @@ struct SettingsView: View {
         VStack(spacing: 12) {
             providerPicker
 
-            FieldRow(title: "API Key") {
+            FieldRow(title: provider.requiresAPIKey ? "API Key" : "API Key (optional)") {
                 SecureField(provider.apiKeyPlaceholder, text: $apiKey)
                     .textFieldStyle(.plain)
             }
@@ -233,28 +233,67 @@ struct SettingsView: View {
 
     private var statusCard: some View {
         SettingsCardRow(
-            icon: hasDraftAPIKey ? "checkmark" : "exclamationmark",
-            iconColor: hasDraftAPIKey ? .green : .orange,
+            icon: isDraftReady ? "checkmark" : "exclamationmark",
+            iconColor: isDraftReady ? .green : .orange,
             title: "\(provider.title) API",
             subtitle: model,
-            trailing: hasDraftAPIKey ? "Ready" : "Missing"
+            trailing: isDraftReady ? "Ready" : "Missing"
         )
     }
 
-    @ViewBuilder
-    private var historyCarousel: some View {
-        if !historyStore.items.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("History")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white.opacity(0.72))
-                    Spacer()
-                    Text("Last \(historyStore.items.count)")
-                        .font(.system(size: 12, weight: .semibold))
+                    Text(historyStore.isEnabled ? "Last \(historyStore.items.count) translations" : "Paused")
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.38))
                 }
 
+                Spacer()
+
+                Button {
+                    historyStore.setEnabled(!historyStore.isEnabled)
+                } label: {
+                    Image(systemName: historyStore.isEnabled ? "pause.fill" : "play.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(historyStore.isEnabled ? GoldTheme.gold : .green)
+                        .frame(width: 28, height: 26)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(.white.opacity(0.07))
+                )
+                .help(historyStore.isEnabled ? "Pause history" : "Resume history")
+
+                Button {
+                    historyStore.clear()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(historyStore.items.isEmpty ? .white.opacity(0.28) : .red.opacity(0.9))
+                        .frame(width: 28, height: 26)
+                }
+                .buttonStyle(.plain)
+                .disabled(historyStore.items.isEmpty)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(.white.opacity(0.07))
+                )
+                .help("Clear history")
+            }
+
+            if historyStore.items.isEmpty {
+                Text(historyStore.isEnabled ? "No recent translations yet." : "History is paused. New translations will not be saved.")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+            } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(historyStore.items) { item in
@@ -270,10 +309,16 @@ struct SettingsView: View {
                 }
             }
         }
+        .padding(14)
+        .background(cardBackground)
     }
 
     private var hasDraftAPIKey: Bool {
         !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var isDraftReady: Bool {
+        provider.requiresAPIKey ? hasDraftAPIKey : true
     }
 
     private var providerPicker: some View {
@@ -403,7 +448,7 @@ struct SettingsView: View {
         model = selectedSettings.model
         isCustomModel = !selectedProvider.modelCatalog.options.contains(selectedSettings.model)
         targetLanguage = selectedSettings.targetLanguage
-        validationMessage = selectedSettings.hasAPIKey ? nil : "Add your \(selectedProvider.title) API key, then save."
+        validationMessage = selectedSettings.isReadyToTranslate ? nil : "Add your \(selectedProvider.title) API key, then save."
     }
 }
 

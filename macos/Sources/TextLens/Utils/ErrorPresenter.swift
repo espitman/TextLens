@@ -20,7 +20,7 @@ enum TextLensError: LocalizedError {
         case .invalidSelection:
             return "The selected area is too small or outside the current display."
         case .missingAPIKey:
-            return "Add the Liara/OpenAI-compatible API key in Settings."
+            return "Add the selected provider API key in Settings, or choose a local provider that does not require one."
         case .noTextFound:
             return "No text found in selected area"
         case .notImplemented(let message):

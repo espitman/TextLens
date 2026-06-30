@@ -27,7 +27,7 @@ final class TranslationFlowController {
 
     @MainActor
     func startTranslateArea() {
-        guard settingsStore.settings.hasAPIKey else {
+        guard settingsStore.settings.isReadyToTranslate else {
             openSettings()
             return
         }

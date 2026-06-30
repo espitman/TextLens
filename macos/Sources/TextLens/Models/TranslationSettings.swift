@@ -3,6 +3,7 @@ import Foundation
 enum TranslationProvider: String, CaseIterable, Identifiable {
     case liara
     case openRouter
+    case local
 
     var id: String {
         rawValue
@@ -14,11 +15,22 @@ enum TranslationProvider: String, CaseIterable, Identifiable {
             "Liara"
         case .openRouter:
             "OpenRouter"
+        case .local:
+            "Local"
         }
     }
 
     var apiKeyPlaceholder: String {
-        "\(title) API key"
+        requiresAPIKey ? "\(title) API key" : "Optional API key"
+    }
+
+    var requiresAPIKey: Bool {
+        switch self {
+        case .liara, .openRouter:
+            true
+        case .local:
+            false
+        }
     }
 
     var defaultBaseURL: URL {
@@ -27,6 +39,8 @@ enum TranslationProvider: String, CaseIterable, Identifiable {
             URL(string: "https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1")!
         case .openRouter:
             URL(string: "https://openrouter.ai/api/v1")!
+        case .local:
+            URL(string: "http://127.0.0.1:8088/v1")!
         }
     }
 
@@ -58,10 +72,21 @@ enum TranslationProvider: String, CaseIterable, Identifiable {
                     "anthropic/claude-3.5-sonnet",
                 ]
             )
+        case .local:
+            TranslationModelCatalog(
+                defaultModel: "local-model",
+                placeholder: "Type a local model id",
+                options: [
+                    "local-model",
+                    "llama3.2",
+                    "qwen2.5",
+                    "mistral",
+                ]
+            )
         }
     }
 
-    static let settingsDisplayOrder: [TranslationProvider] = [.openRouter, .liara]
+    static let settingsDisplayOrder: [TranslationProvider] = [.openRouter, .liara, .local]
 }
 
 struct TranslationModelCatalog: Equatable {
@@ -79,6 +104,10 @@ struct TranslationSettings: Equatable {
 
     var hasAPIKey: Bool {
         !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var isReadyToTranslate: Bool {
+        provider.requiresAPIKey ? hasAPIKey : true
     }
 
     static let defaults = defaults(for: .liara)

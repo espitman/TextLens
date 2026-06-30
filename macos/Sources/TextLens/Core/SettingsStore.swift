@@ -112,6 +112,8 @@ final class SettingsStore: ObservableObject {
             return defaults.baseURL.absoluteString
         case .openRouter where host.contains("liara.ir"):
             return defaults.baseURL.absoluteString
+        case .local:
+            return baseURLString
         default:
             return baseURLString
         }

@@ -11,7 +11,7 @@ final class TranslationService: TranslationServiceProtocol {
     }
 
     func translate(_ text: String, settings: TranslationSettings) async throws -> TranslationResult {
-        guard settings.hasAPIKey else {
+        guard settings.isReadyToTranslate else {
             throw TextLensError.missingAPIKey
         }
 
@@ -20,10 +20,12 @@ final class TranslationService: TranslationServiceProtocol {
             throw TextLensError.noTextFound
         }
 
-        var request = URLRequest(url: chatCompletionsURL(from: settings.baseURL))
+        var request = URLRequest(url: chatCompletionsURL(from: settings.baseURL, provider: settings.provider))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(authorizationHeaderValue(for: settings), forHTTPHeaderField: "Authorization")
+        if let authorizationHeader = authorizationHeaderValue(for: settings) {
+            request.setValue(authorizationHeader, forHTTPHeaderField: "Authorization")
+        }
         if settings.provider == .openRouter {
             request.setValue("TextLens", forHTTPHeaderField: "X-OpenRouter-Title")
         }
@@ -216,11 +218,14 @@ final class TranslationService: TranslationServiceProtocol {
         return error.localizedDescription
     }
 
-    private func authorizationHeaderValue(for settings: TranslationSettings) -> String {
+    private func authorizationHeaderValue(for settings: TranslationSettings) -> String? {
         let apiKey = settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !apiKey.isEmpty else {
+            return nil
+        }
 
         switch settings.provider {
-        case .liara, .openRouter:
+        case .liara, .openRouter, .local:
             if apiKey.range(of: "Bearer ", options: [.anchored, .caseInsensitive]) != nil {
                 return apiKey
             }
@@ -229,11 +234,18 @@ final class TranslationService: TranslationServiceProtocol {
         }
     }
 
-    private func chatCompletionsURL(from baseURL: URL) -> URL {
+    private func chatCompletionsURL(from baseURL: URL, provider: TranslationProvider) -> URL {
         let normalized = baseURL.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: #"/+$"#, with: "", options: .regularExpression)
         if normalized.hasSuffix("/chat/completions") {
             return URL(string: normalized) ?? baseURL
+        }
+
+        if provider == .local {
+            let path = baseURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            if path.isEmpty {
+                return URL(string: "\(normalized)/v1/chat/completions") ?? baseURL
+            }
         }
 
         return URL(string: "\(normalized)/chat/completions") ?? baseURL
