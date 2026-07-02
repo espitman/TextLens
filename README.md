@@ -46,13 +46,13 @@ The script creates `/Applications/TextLens.app` and opens it. This gives macOS a
 Create an experimental DMG release with:
 
 ```sh
-./scripts/build-dmg.sh 0.1.0
+./scripts/build-dmg.sh 0.1.1
 ```
 
 The DMG is written to:
 
 ```text
-dist/TextLens-0.1.0.dmg
+dist/TextLens-0.1.1.dmg
 ```
 
 Release guide:
@@ -160,7 +160,7 @@ Package it for GitHub release with:
 The DMG is written to:
 
 ```text
-dist/YouTube-TextLens-Translator-0.1.0-macOS.dmg
+dist/YouTube-TextLens-Translator-0.1.1-macOS.dmg
 ```
 
 Release guide:

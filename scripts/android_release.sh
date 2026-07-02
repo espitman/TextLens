@@ -5,6 +5,8 @@ set -euo pipefail
 PROJECT_ROOT="/Users/espitman/Documents/Projects/TextLens"
 ANDROID_DIR="$PROJECT_ROOT/android"
 DESKTOP_DIR="$HOME/Desktop"
+DIST_DIR="$PROJECT_ROOT/dist"
+VERSION_NAME="${VERSION_NAME:-0.1.1}"
 
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
 ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
@@ -27,7 +29,7 @@ if [ ! -x "$JAVA_HOME/bin/keytool" ]; then
   exit 1
 fi
 
-mkdir -p "$KEYSTORE_DIR"
+mkdir -p "$KEYSTORE_DIR" "$DIST_DIR"
 
 if [ ! -f "$KEYSTORE_PATH" ]; then
   echo "Creating local TextLens release keystore..."
@@ -62,8 +64,11 @@ if [ ! -f "$APK_PATH" ]; then
   exit 1
 fi
 
-OUT_APK="$DESKTOP_DIR/textlens-release.apk"
+OUT_NAME="TextLens-Android-$VERSION_NAME.apk"
+OUT_APK="$DESKTOP_DIR/$OUT_NAME"
 cp "$APK_PATH" "$OUT_APK"
+cp "$APK_PATH" "$DIST_DIR/$OUT_NAME"
 
 echo "Release APK copied to:"
 echo "$OUT_APK"
+echo "$DIST_DIR/$OUT_NAME"

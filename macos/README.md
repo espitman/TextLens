@@ -15,7 +15,9 @@ This build is an experimental GitHub release. It is intentionally unsigned/not n
 - Provider settings for:
   - OpenRouter
   - Liara
+  - Local OpenAI-compatible server
 - Model picker with custom model support.
+- Expanded Liara Gemini model options.
 - Retry flow with model switching.
 - No analytics or telemetry.
 
@@ -23,12 +25,12 @@ This build is an experimental GitHub release. It is intentionally unsigned/not n
 
 - macOS 13 or newer.
 - Screen Recording permission.
-- Your own OpenAI-compatible API key.
+- Your own OpenAI-compatible API key, unless you use a local provider that does not require one.
 - Internet access for translation requests.
 
 ## Install The Experimental DMG
 
-1. Download `TextLens-0.1.0.dmg` from the GitHub release.
+1. Download `TextLens-0.1.1.dmg` from the GitHub release.
 2. Open the DMG.
 3. Drag `TextLens.app` into `Applications`.
 4. Open `Applications`.
@@ -113,6 +115,15 @@ Liara:
 ```text
 Base URL: https://ai.liara.ir/api/6a0ccd2d298429714a4b3e25/v1
 Default model: openai/gpt-5-nano
+Additional models: google/gemini-2.5-flash-lite, google/gemini-3.1-flash-lite, google/gemini-2.5-flash
+```
+
+Local:
+
+```text
+Base URL: http://127.0.0.1:8088/v1
+Default model: local-model
+API key: optional
 ```
 
 Target language:
@@ -146,13 +157,13 @@ Current experimental limitation:
 From the repository root:
 
 ```sh
-./scripts/build-dmg.sh 0.1.0
+./scripts/build-dmg.sh 0.1.1
 ```
 
 The DMG is created at:
 
 ```text
-dist/TextLens-0.1.0.dmg
+dist/TextLens-0.1.1.dmg
 ```
 
 For local development:

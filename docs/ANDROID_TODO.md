@@ -41,6 +41,7 @@ This document defines the Android implementation plan for TextLens with a floati
   - [x] Store API keys in EncryptedSharedPreferences or Android Keystore-backed storage
   - [x] Keep Liara and OpenRouter API keys fully separate
   - [x] Add default Liara model: `openai/gpt-5-nano`
+  - [x] Add Liara Gemini models: `google/gemini-2.5-flash-lite`, `google/gemini-3.1-flash-lite`, `google/gemini-2.5-flash`
   - [x] Add default OpenRouter model: `google/gemma-4-31b-it:free`
 
 ## Phase 2: Permission Flow

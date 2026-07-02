@@ -55,5 +55,8 @@ val TranslationProvider.modelOptions: List<String>
             "openai/gpt-4.1-mini",
             "google/gemma-3-27b-it",
             "google/gemini-2.0-flash-lite-001",
+            "google/gemini-2.5-flash-lite",
+            "google/gemini-3.1-flash-lite",
+            "google/gemini-2.5-flash",
         )
     }

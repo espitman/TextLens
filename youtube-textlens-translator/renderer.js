@@ -81,7 +81,10 @@ const modelsMap = {
     { value: 'openai/gpt-5-nano', name: 'GPT 5 Nano (Default)', inputPrice: 5000, outputPrice: 20000 },
     { value: 'openai/gpt-4.1-mini', name: 'GPT 4.1 Mini', inputPrice: 10000, outputPrice: 40000 },
     { value: 'google/gemma-3-27b-it', name: 'Gemma 3 27B', inputPrice: 6500, outputPrice: 26000 },
-    { value: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', inputPrice: 5000, outputPrice: 20000 }
+    { value: 'google/gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash Lite', inputPrice: 5000, outputPrice: 20000 },
+    { value: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', inputPrice: 5000, outputPrice: 20000 },
+    { value: 'google/gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', inputPrice: 5000, outputPrice: 20000 },
+    { value: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', inputPrice: 5000, outputPrice: 20000 }
   ]
 };
 

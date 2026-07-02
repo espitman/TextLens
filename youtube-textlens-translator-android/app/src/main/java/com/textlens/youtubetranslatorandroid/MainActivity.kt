@@ -569,7 +569,15 @@ private fun AppTextField(label: String, value: String, onValueChange: (String) -
 @Composable
 private fun ModelPicker(provider: String, model: String, onModelChange: (String) -> Unit) {
     val models = if (provider == "Liara") {
-        listOf("openai/gpt-5-nano", "openai/gpt-4.1-mini", "google/gemma-3-27b-it", "google/gemini-2.0-flash-lite-001")
+        listOf(
+            "openai/gpt-5-nano",
+            "openai/gpt-4.1-mini",
+            "google/gemma-3-27b-it",
+            "google/gemini-2.0-flash-lite-001",
+            "google/gemini-2.5-flash-lite",
+            "google/gemini-3.1-flash-lite",
+            "google/gemini-2.5-flash",
+        )
     } else {
         listOf("google/gemma-4-31b-it:free", "openai/gpt-4.1-mini", "google/gemini-2.0-flash-lite-001", "anthropic/claude-3.5-sonnet")
     }

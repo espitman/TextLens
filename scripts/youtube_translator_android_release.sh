@@ -6,6 +6,7 @@ PROJECT_ROOT="/Users/espitman/Documents/Projects/TextLens"
 ANDROID_DIR="$PROJECT_ROOT/youtube-textlens-translator-android"
 DESKTOP_DIR="$HOME/Desktop"
 DIST_DIR="$PROJECT_ROOT/dist"
+VERSION_NAME="${VERSION_NAME:-0.1.2}"
 
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
 ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
@@ -62,7 +63,7 @@ if [ ! -f "$APK_PATH" ]; then
   exit 1
 fi
 
-OUT_NAME="youtube-textlens-translator-android-0.1.1-release.apk"
+OUT_NAME="youtube-textlens-translator-android-$VERSION_NAME-release.apk"
 cp "$APK_PATH" "$DESKTOP_DIR/$OUT_NAME"
 cp "$APK_PATH" "$DIST_DIR/$OUT_NAME"
 
